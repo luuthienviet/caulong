@@ -1,19 +1,13 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const courtSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
-  pricePerHour: {
-    type: Number,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['available', 'maintenance'],
-    default: 'available'
-  }
+  avgRating: { type: Number, default: 0 },
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  description: { type: String },
+  image: { type: String },
+  status: { type: String, enum: ["Trống", "Đang sử dụng", "Đang bảo trì"], default: "Trống" },
+  reviewCount: { type: Number, default: 0 }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Court', courtSchema);
+export default mongoose.model("Court", courtSchema);

@@ -1,52 +1,43 @@
-const Court = require('../models/Court');
+import Court from "../models/Court.js";
 
-// Admin tạo sân
-exports.createCourt = async (req, res) => {
-  try {
-    const { name, pricePerHour } = req.body;
-
-    const court = await Court.create({
-      name,
-      pricePerHour
-    });
-
-    res.status(201).json({ message: 'Tạo sân thành công', court });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Xem danh sách sân
-exports.getCourts = async (req, res) => {
+// Lấy tất cả sân
+export const getCourts = async (req, res, next) => {
   try {
     const courts = await Court.find();
-    res.json(courts);
+    res.status(200).json({ success: true, data: courts });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-// Admin cập nhật sân
-exports.updateCourt = async (req, res) => {
+// Tạo sân mới (admin)
+export const createCourt = async (req, res, next) => {
   try {
-    const court = await Court.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-
-    res.json({ message: 'Cập nhật sân thành công', court });
+    const court = await Court.create(req.body);
+    res.status(201).json({ success: true, data: court });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-// Admin xoá sân
-exports.deleteCourt = async (req, res) => {
+// Cập nhật sân (admin)
+export const updateCourt = async (req, res, next) => {
   try {
-    await Court.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Xoá sân thành công' });
+    const court = await Court.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!court) return res.status(404).json({ message: "Không tìm thấy sân" });
+    res.status(200).json({ success: true, data: court });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
+  }
+};
+
+// Xóa sân (admin)
+export const deleteCourt = async (req, res, next) => {
+  try {
+    const court = await Court.findByIdAndDelete(req.params.id);
+    if (!court) return res.status(404).json({ message: "Không tìm thấy sân" });
+    res.status(200).json({ success: true, message: "Xóa thành công" });
+  } catch (error) {
+    next(error);
   }
 };
