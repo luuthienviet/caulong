@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  searchBookingsByPhone,
   getAllBookings,
   getUserBookings,
   createBooking,
@@ -10,6 +11,9 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
+
+// Public lookup theo số điện thoại
+router.get("/search", searchBookingsByPhone);
 
 // Tất cả routes đều yêu cầu auth
 router.use(authMiddleware);

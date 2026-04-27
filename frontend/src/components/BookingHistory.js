@@ -4,7 +4,8 @@ export default function BookingHistory({
   bookingRequests,
   user,
   cancelBooking,
-  adminPhone
+  adminPhone,
+  highlightBookingId
 }) {
   // Lọc booking của user hiện tại (dựa trên userId)
   const myBookings = bookingRequests.filter(req => {
@@ -40,7 +41,7 @@ export default function BookingHistory({
               const duration = req.duration || 1;
               const endHour = startHour + duration;
               return (
-                <tr key={req.id}>
+                <tr key={req.id} style={{ background: String(req.id) === String(highlightBookingId) || String(req._id) === String(highlightBookingId) ? '#e8f7ff' : 'transparent' }}>
                   <td>{req.courtName}</td>
                   <td>{req.date}</td>
                   <td>{startHour}:00</td>

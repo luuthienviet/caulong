@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import API from '../api';
+import { AuthContext } from '../AuthContext';
 
-export default function Login({ setPage, setAuthMode, setIsLoggedIn, setUser }) {
+export default function Login({ setPage, setAuthMode }) {
+  const { login } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,11 +15,7 @@ export default function Login({ setPage, setAuthMode, setIsLoggedIn, setUser }) 
       const res = await API.post('/auth/login', { username, password });
       const { token, user } = res.data;
       localStorage.setItem('token', token);
-      localStorage.setItem('currentUser', JSON.stringify(user));
-
-      // ✅ Thêm 2 dòng này để fix lỗi phải reload
-      setUser(user);
-      setIsLoggedIn(true);
+      login(user);
 
       if (user.role === 'admin') {
         setPage('admin');

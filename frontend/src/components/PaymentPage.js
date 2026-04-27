@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function PaymentPage({ bookingData, setPage, handleBooking }) {
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -6,15 +6,58 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
   const [loading, setLoading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [transferContent, setTransferContent] = useState('');
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
+
+  useEffect(() => {
+    if (!bookingData) return;
+    setPhoneNumber(bookingData.customerPhone || '');
+    setTransferContent(`DATCOC_${bookingData.selectedCourt.name.replace(/\s+/g, '_')}_${bookingData.selectedDate}_${bookingData.customerPhone || ''}`);
+  }, [bookingData]);
 
   if (!bookingData) {
     setPage('home');
     return null;
   }
 
-  const { selectedCourt, selectedDate, selectedHour, duration, totalPrice, depositAmount, user } = bookingData;
-  const startHour = parseInt(selectedHour);
+  const {
+    selectedCourt,
+    selectedDate,
+    selectedHour,
+    duration,
+    totalPrice,
+    depositAmount,
+    customerName,
+    customerPhone,
+    customerNote,
+    user,
+  } = bookingData;
+  const startHour = parseInt(selectedHour, 10);
   const endHour = startHour + duration;
+  const remainingAmount = Math.max(totalPrice - depositAmount, 0);
+
+  const generateConfirmationCode = () => {
+    const datePart = selectedDate.replace(/-/g, '');
+    const hourPart = String(startHour).padStart(2, '0');
+    return `#CF${datePart}${hourPart}`;
+  };
+
+  const getCalendarDate = (dateStr, hour) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, Number(hour), 0, 0, 0);
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .split('.')[0] + 'Z';
+  };
+
+  const getGoogleCalendarLink = () => {
+    const start = getCalendarDate(selectedDate, startHour);
+    const end = getCalendarDate(selectedDate, endHour);
+    const details = `Đặt sân ${selectedCourt.name} từ ${startHour}:00 đến ${endHour}:00. Ghi chú: ${customerNote || 'Không có'}`;
+    const title = `Xác nhận đặt sân ${selectedCourt.name}`;
+    const location = 'Kon Tum, Việt Nam';
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}&sf=true&output=xml`;
+  };
 
   const handlePaymentMethodSelect = async (method) => {
     setPaymentMethod(method);
@@ -33,7 +76,7 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
       };
       await handleBooking(newBooking);
       setLoading(false);
-      alert("✅ Yêu cầu đặt sân đã gửi! Vui lòng đến sân thanh toán đủ tiền.");
+      alert("✅ Yêu cầu đặt sân đã gửi! Vui lòng đến sân thanh toán đủ tiền khi nhận sân.");
       setPage('home');
     }
   };
@@ -72,6 +115,9 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
       hour: selectedHour,
       duration: duration,
       total: totalPrice,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerNote: customerNote,
       paymentImage: uploadedImage,
       status: "pending",
       paymentMethod: "chuyển khoản cọc",
@@ -92,14 +138,42 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
         <div className="booking-summary">
           <h2>📋 THÔNG TIN ĐẶT LỊCH</h2>
           <div className="summary-grid">
-            <div className="summary-item"><strong>Khách hàng:</strong> {user?.name || user?.username}</div>
+            <div className="summary-item"><strong>Khách hàng:</strong> {customerName || user?.name || user?.username}</div>
+            <div className="summary-item"><strong>SĐT:</strong> {customerPhone || 'Chưa có'}</div>
             <div className="summary-item"><strong>Sân:</strong> {selectedCourt.name}</div>
             <div className="summary-item"><strong>Ngày:</strong> {selectedDate}</div>
             <div className="summary-item"><strong>Giờ:</strong> {startHour}:00 - {endHour}:00</div>
             <div className="summary-item"><strong>Số giờ:</strong> {duration}</div>
+            <div className="summary-item"><strong>Ghi chú:</strong> {customerNote || '—'}</div>
             <div className="summary-item"><strong>Tổng tiền:</strong> {totalPrice.toLocaleString()} VNĐ</div>
             <div className="summary-item"><strong>Tiền cọc 50%:</strong> {depositAmount.toLocaleString()} VNĐ</div>
+            <div className="summary-item"><strong>Còn lại phải thanh toán tại sân:</strong> {remainingAmount.toLocaleString()} VNĐ</div>
           </div>
+        </div>
+
+        <div className="confirmation-card">
+          <h2>✅ MÃ XÁC NHẬN ĐẶT SÂN</h2>
+          <p>Bạn có thể dùng mã này để tra cứu trạng thái đặt sân hoặc liên hệ admin.</p>
+          <div className="confirmation-code">{generateConfirmationCode()}</div>
+          <a
+            href={getGoogleCalendarLink()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-calendar"
+          >
+            Thêm vào Google Calendar
+          </a>
+        </div>
+
+        <div className="payment-instructions">
+          <h2>🔔 LƯU Ý QUAN TRỌNG</h2>
+          <ul>
+            <li>Chọn phương thức thanh toán phù hợp trước khi gửi yêu cầu.</li>
+            <li>Với chuyển khoản cọc, bắt buộc tải ảnh biên lai/chứng từ lên.</li>
+            <li>Ghi chính xác nội dung chuyển khoản: <strong>DATCOC_{selectedCourt.name.replace(/\s+/g, '_')}_{selectedDate}_{phoneNumber || 'SĐT'}</strong>.</li>
+            <li>Giữ lại hóa đơn nếu thanh toán đầy đủ tại sân.</li>
+            <li>Admin sẽ kiểm tra và xác nhận sau khi bạn gửi thông tin thanh toán.</li>
+          </ul>
         </div>
 
         <div className="payment-methods">
@@ -111,7 +185,7 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
             >
               <div className="method-icon">🏦</div>
               <h3>Chuyển khoản cọc 50%</h3>
-              <p>Chuyển khoản {depositAmount.toLocaleString()} VNĐ để đặt cọc, số còn lại thanh toán tại sân.</p>
+              <p>Chuyển khoản {depositAmount.toLocaleString()} VNĐ để giữ chỗ. Phần còn lại {remainingAmount.toLocaleString()} VNĐ sẽ thanh toán khi đến sân.</p>
             </div>
             <div 
               className={`method-card ${paymentMethod === 'full_at_court' ? 'active' : ''}`}
@@ -119,7 +193,7 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
             >
               <div className="method-icon">💵</div>
               <h3>Thanh toán 100% tại sân</h3>
-              <p>Đặt sân không cần cọc, thanh toán đủ tiền khi đến sân.</p>
+              <p>Không cần chuyển khoản trước. Thanh toán đủ tiền khi bạn đến sân và nhận sân.</p>
             </div>
           </div>
         </div>
@@ -129,12 +203,13 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
             <h2>🏦 THÔNG TIN CHUYỂN KHOẢN CỌC</h2>
             <div className="bank-info">
               <p><strong>Ngân hàng:</strong> Vietcombank</p>
+              <p><strong>Chi nhánh:</strong> Kon Tum</p>
               <p><strong>Số tài khoản:</strong> 0123456789</p>
               <p><strong>Chủ tài khoản:</strong> A CHEH VINH</p>
             </div>
-            <div className="qr-code">
+            <div className="qr-code-card">
               <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QR" />
-              <p>Quét mã QR để chuyển khoản {depositAmount.toLocaleString()} VNĐ</p>
+              <p>Quét mã QR và chuyển khoản đúng số tiền cọc {depositAmount.toLocaleString()} VNĐ.</p>
             </div>
             <div className="form-group">
               <label>📞 Số điện thoại (bắt buộc)</label>
@@ -217,6 +292,45 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
           background: white;
           border-radius: 8px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .confirmation-card {
+          margin: 30px 0;
+          background: #e9f7ef;
+          border: 1px solid #c3e6cb;
+          border-radius: 18px;
+          padding: 24px;
+          text-align: center;
+        }
+        .confirmation-card h2 {
+          margin-bottom: 10px;
+          color: #155724;
+        }
+        .confirmation-code {
+          display: inline-block;
+          margin: 15px 0;
+          padding: 16px 24px;
+          border-radius: 12px;
+          background: white;
+          color: #2c3e50;
+          font-size: 20px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .btn-calendar {
+          display: inline-block;
+          margin-top: 15px;
+          background: #4285f4;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 999px;
+          text-decoration: none;
+          font-weight: 600;
+          transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .btn-calendar:hover {
+          background: #3367d6;
+          transform: translateY(-2px);
         }
         .payment-methods {
           margin-bottom: 30px;

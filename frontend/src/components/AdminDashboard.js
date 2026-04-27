@@ -4,13 +4,16 @@ import FooterSettings from "./FooterSettings";
 
 export default function AdminDashboard({ 
   bookingRequests = [], 
+  users = [],
   approveBooking, 
   rejectBooking, 
   deleteBooking, 
   clearOldBookings, 
   courts = [], 
-  setCourts 
+  setCourts,
+  refreshBookings
 }) {
+  const currentDate = new Date().toISOString().split('T')[0];
   const [activeTab, setActiveTab] = useState('revenue');
   const [editingCourt, setEditingCourt] = useState(null);
   const [newCourt, setNewCourt] = useState({ name: '', price: 0, desc: '', image: '' });
@@ -19,6 +22,15 @@ export default function AdminDashboard({
   const [qrCode, setQrCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [showFooterModal, setShowFooterModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(currentDate);
+  const [detailBooking, setDetailBooking] = useState(null);
+  const [quickBooking, setQuickBooking] = useState(null);
+  const [quickCustomerName, setQuickCustomerName] = useState('');
+  const [quickDuration, setQuickDuration] = useState(1);
+  const [quickStatus, setQuickStatus] = useState('approved');
+  const [revenueFilter, setRevenueFilter] = useState('week');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [remainingCollected, setRemainingCollected] = useState(() => {
     const saved = localStorage.getItem('remainingCollected');
     return saved ? JSON.parse(saved) : [];
@@ -71,7 +83,7 @@ export default function AdminDashboard({
     return currentTime >= start.getTime() && currentTime < end.getTime();
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = currentDate;
   const bookingsToday = bookingRequests.filter(b => b.date === today);
   const approvedToday = bookingsToday.filter(b => b.status === 'approved');
   const revenueToday = approvedToday.reduce((sum, b) => sum + (b.total || 0), 0);
@@ -87,6 +99,7 @@ export default function AdminDashboard({
     const booking = bookingRequests.find(b => String(b._id || b.id) === String(id));
     return sum + (booking ? getRemaining(booking) : 0);
   }, 0);
+  // eslint-disable-next-line
   const totalRevenue = totalDepositRevenue + totalRemainingCollected;
   const pendingRemainingBookings = bookingRequests.filter(b => 
     b.status === 'approved' && isBookingCompleted(b) && !remainingCollected.includes(String(b._id || b.id))
@@ -100,6 +113,259 @@ export default function AdminDashboard({
       if (typeof booking.userId === 'string') return booking.userId;
     }
     return booking.customerName || 'Khách';
+  };
+
+  const parseBookingDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const getUserName = (user) => {
+    if (!user) return 'Khách';
+    return user.username || user.name || user.email || 'Khách';
+  };
+
+  const getUserId = (user) => String(user?._id || user?.id || '');
+
+  const getBookingUserId = (booking) => {
+    if (!booking) return '';
+    if (booking.userId) {
+      if (typeof booking.userId === 'object') return String(booking.userId._id || booking.userId.id || booking.userId);
+      return String(booking.userId);
+    }
+    return '';
+  };
+
+  const getUserBookings = (user) => {
+    const userId = getUserId(user);
+    const userName = getUserName(user);
+    return bookingRequests.filter(b => {
+      const bookingUserId = getBookingUserId(b);
+      if (bookingUserId && userId && bookingUserId === userId) return true;
+      if ((!bookingUserId || bookingUserId === '') && b.customerName && userName && b.customerName.toLowerCase() === userName.toLowerCase()) return true;
+      if (user.email && b.customerName && b.customerName.toLowerCase() === user.email.toLowerCase()) return true;
+      return false;
+    });
+  };
+
+  const customerData = users.map(user => {
+    const bookings = getUserBookings(user);
+    const approvedBookings = bookings.filter(b => b.status === 'approved');
+    // eslint-disable-next-line
+    const totalRevenue = approvedBookings.reduce((sum, b) => sum + (b.total || 0), 0);
+    const lastBooking = bookings.reduce((latest, b) => {
+      if (!b.date) return latest;
+      const date = parseBookingDate(b.date);
+      return !latest || date > latest ? date : latest;
+    }, null);
+    return {
+      user,
+      bookings,
+      approvedBookings,
+      totalRevenue,
+      totalBookings: bookings.length,
+      lastBooking,
+    };
+  });
+
+  const filteredCustomers = customerData
+    .filter(item => {
+      const term = customerSearch.trim().toLowerCase();
+      if (!term) return true;
+      const name = getUserName(item.user).toLowerCase();
+      const email = (item.user.email || '').toLowerCase();
+      return name.includes(term) || email.includes(term);
+    })
+    .sort((a, b) => b.totalRevenue - a.totalRevenue || b.totalBookings - a.totalBookings);
+
+  const selectedCustomerData = selectedCustomer ? customerData.find(item => getUserId(item.user) === getUserId(selectedCustomer)) : null;
+
+  const topCustomers = filteredCustomers.slice(0, 10);
+
+  const formatDateLabel = (date) => {
+    if (!date) return 'Chưa đặt';
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  const formatMoney = (value) => (value || 0).toLocaleString() + ' VNĐ';
+
+  const getCustomerStatus = (item) => {
+    if (item.totalBookings === 0) return 'Chưa đặt';
+    if (item.totalRevenue === 0) return 'Đang xem';
+    return 'Hoạt động';
+  };
+
+  const handleSelectCustomer = (user) => {
+    setSelectedCustomer(user);
+  };
+
+  const getPeriodBounds = (filter) => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (filter === 'today') {
+      return { start: new Date(end), end: new Date(end) };
+    }
+    if (filter === 'month') {
+      return { start: new Date(end.getFullYear(), end.getMonth(), 1), end: new Date(end) };
+    }
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    return { start, end };
+  };
+
+  const formatDayLabel = (date) => {
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const getRevenueBookings = (filter) => {
+    const { start, end } = getPeriodBounds(filter);
+    return bookingRequests.filter(b => {
+      if (b.status !== 'approved') return false;
+      const bookingDate = parseBookingDate(b.date);
+      return bookingDate >= start && bookingDate <= end;
+    });
+  };
+
+  const getPreviousPeriodBounds = (filter) => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (filter === 'today') {
+      const prev = new Date(end);
+      prev.setDate(prev.getDate() - 1);
+      return { start: new Date(prev), end: new Date(prev) };
+    }
+    if (filter === 'month') {
+      const start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+      const prevEnd = new Date(end.getFullYear(), end.getMonth(), 0);
+      return { start, end: prevEnd };
+    }
+    const start = new Date(end);
+    start.setDate(start.getDate() - 13);
+    const middle = new Date(end);
+    middle.setDate(middle.getDate() - 7);
+    return { start, end: middle };
+  };
+
+  const getRevenueTotal = (bookings) => bookings.reduce((sum, b) => sum + (b.total || 0), 0);
+
+  const currentPeriodBookings = getRevenueBookings(revenueFilter);
+  const previousPeriodBookings = bookingRequests.filter(b => {
+    if (b.status !== 'approved') return false;
+    const bookingDate = parseBookingDate(b.date);
+    const { start, end } = getPreviousPeriodBounds(revenueFilter);
+    return bookingDate >= start && bookingDate <= end;
+  });
+  const revenueCurrent = getRevenueTotal(currentPeriodBookings);
+  const revenuePrevious = getRevenueTotal(previousPeriodBookings);
+  const growthPct = revenuePrevious === 0 ? (revenueCurrent === 0 ? 0 : 100) : Math.round(((revenueCurrent - revenuePrevious) / revenuePrevious) * 100);
+  const growthLabel = revenueCurrent >= revenuePrevious ? `+${growthPct}%` : `${growthPct}%`;
+  const growthColor = revenueCurrent >= revenuePrevious ? '#198754' : '#dc3545';
+
+  const chartDates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const dayLabel = formatDayLabel(date);
+    const amount = getRevenueTotal(bookingRequests.filter(b => b.status === 'approved' && parseBookingDate(b.date).getTime() === date.getTime()));
+    return { dayLabel, amount };
+  });
+  const lineMax = Math.max(1, ...chartDates.map(item => item.amount));
+  const linePoints = chartDates.map((item, index) => {
+    const x = 20 + index * 80;
+    const y = 140 - Math.round((item.amount / lineMax) * 120);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const courtRevenueData = safeCourts.map(court => ({
+    court,
+    value: getRevenueTotal(currentPeriodBookings.filter(b => String(b.courtId) === String(court.id || court._id)))
+  }));
+  const maxCourtRevenue = Math.max(1, ...courtRevenueData.map(item => item.value));
+
+  const peakRevenue = getRevenueTotal(currentPeriodBookings.filter(b => {
+    const hour = Number(b.hour);
+    return hour >= 17 && hour <= 21;
+  }));
+  const offPeakRevenue = getRevenueTotal(currentPeriodBookings.filter(b => {
+    const hour = Number(b.hour);
+    return hour < 17 || hour > 21;
+  }));
+  const totalPeak = peakRevenue + offPeakRevenue || 1;
+  const peakPercent = Math.round((peakRevenue / totalPeak) * 100);
+  const offPeakPercent = 100 - peakPercent;
+
+  const scheduleHours = Array.from({ length: 17 }, (_, index) => 5 + index);
+  const scheduleBookings = bookingRequests.filter(b => b.date === selectedDate);
+  const getSlotBooking = (court, hour) => {
+    return scheduleBookings.find(b => String(b.courtId) === String(court.id || court._id) && String(b.hour) === String(hour));
+  };
+  const getSlotClass = (booking) => {
+    if (!booking) return 'slot-free';
+    if (booking.status === 'pending') return 'slot-pending';
+    if (booking.status === 'approved') {
+      return isBookingCompleted(booking) ? 'slot-completed' : 'slot-approved';
+    }
+    return 'slot-rejected';
+  };
+  const getSlotLabel = (booking) => {
+    if (!booking) return 'Trống';
+    if (booking.status === 'pending') return 'Chờ duyệt';
+    if (booking.status === 'approved') return isBookingCompleted(booking) ? 'Kết thúc' : 'Đã đặt';
+    return 'Từ chối';
+  };
+  const calculateQuickPrice = (court, hour, duration = 1) => {
+    if (!court || hour == null) return 0;
+    const hourNumber = Number(hour);
+    let pricePerHour = court.price || 0;
+    if (hourNumber >= 17) pricePerHour = Math.floor(pricePerHour * 1.3);
+    return pricePerHour * duration;
+  };
+  const canBookDuration = (court, hour, duration) => {
+    const start = Number(hour);
+    for (let step = 0; step < duration; step += 1) {
+      const targetHour = String(start + step).padStart(2, '0');
+      const existing = bookingRequests.find(b => String(b.courtId) === String(court.id || court._id) && b.date === selectedDate && String(b.hour) === String(targetHour) && b.status === 'approved');
+      if (existing) return false;
+    }
+    return true;
+  };
+  const handleEmptySlotClick = (court, hour) => {
+    setQuickBooking({ court, hour: String(hour).padStart(2, '0'), date: selectedDate });
+    setQuickCustomerName('');
+    setQuickDuration(1);
+    setQuickStatus('approved');
+    setDetailBooking(null);
+  };
+  const handleBookedSlotClick = (booking) => {
+    setDetailBooking(booking);
+    setQuickBooking(null);
+  };
+  const submitQuickBooking = async () => {
+    if (!quickBooking) return;
+    if (!quickCustomerName.trim()) {
+      return alert('Nhập tên khách hàng');
+    }
+    if (!canBookDuration(quickBooking.court, quickBooking.hour, quickDuration)) {
+      return alert('Khung giờ này đã trùng lặp với đơn đã duyệt');
+    }
+    const total = calculateQuickPrice(quickBooking.court, quickBooking.hour, quickDuration);
+    try {
+      await API.post('/bookings', {
+        courtId: quickBooking.court.id,
+        courtName: quickBooking.court.name,
+        date: quickBooking.date,
+        hour: quickBooking.hour,
+        duration: quickDuration,
+        total,
+        status: quickStatus
+      });
+      alert('Đặt sân nhanh thành công');
+      setQuickBooking(null);
+      refreshBookings && refreshBookings();
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Đặt sân nhanh thất bại');
+    }
   };
 
   const handleConfirmRemaining = (booking) => {
@@ -243,16 +509,87 @@ export default function AdminDashboard({
         <button onClick={() => setActiveTab('revenue')} style={{ padding: '10px 20px', background: activeTab === 'revenue' ? '#00a651' : 'transparent', color: activeTab === 'revenue' ? 'white' : '#333', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}>💰 DOANH THU</button>
         <button onClick={() => setActiveTab('courts')} style={{ padding: '10px 20px', background: activeTab === 'courts' ? '#00a651' : 'transparent', color: activeTab === 'courts' ? 'white' : '#333', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}>🏸 QUẢN LÝ SÂN</button>
         <button onClick={() => setActiveTab('bookings')} style={{ padding: '10px 20px', background: activeTab === 'bookings' ? '#00a651' : 'transparent', color: activeTab === 'bookings' ? 'white' : '#333', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}>📋 LỊCH ĐẶT SÂN</button>
+        <button onClick={() => setActiveTab('customers')} style={{ padding: '10px 20px', background: activeTab === 'customers' ? '#00a651' : 'transparent', color: activeTab === 'customers' ? 'white' : '#333', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}>👥 KHÁCH HÀNG</button>
       </div>
 
       {activeTab === 'revenue' && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px,1fr))', gap: '20px', marginBottom: '30px' }}>
-            <div className="stat-card"><h3>💰 Tổng doanh thu</h3><p>{totalRevenue.toLocaleString()} VNĐ</p></div>
-            <div className="stat-card"><h3>💵 Tiền cọc (50%)</h3><p>{totalDepositRevenue.toLocaleString()} VNĐ</p></div>
-            <div className="stat-card"><h3>✅ Đơn đã duyệt</h3><p>{approvedCount}</p></div>
-            <div className="stat-card"><h3>⏳ Đơn chờ duyệt</h3><p>{pendingCount}</p></div>
+          <div className="revenue-filter-bar">
+            <div>
+              <h3>📈 Phân tích doanh thu</h3>
+              <p>Hiển thị dữ liệu theo bộ lọc và so sánh với kỳ trước.</p>
+            </div>
+            <div className="revenue-filter-buttons">
+              {['today', 'week', 'month'].map(option => (
+                <button
+                  key={option}
+                  className={revenueFilter === option ? 'filter-btn active' : 'filter-btn'}
+                  onClick={() => setRevenueFilter(option)}
+                >
+                  {option === 'today' ? 'Hôm nay' : option === 'week' ? 'Tuần này' : 'Tháng này'}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <div className="revenue-summary">
+            <div className="stat-card"><h3>💰 Tổng doanh thu</h3><p>{revenueCurrent.toLocaleString()} VNĐ</p></div>
+            <div className="stat-card"><h3>📊 Tăng trưởng</h3><p style={{ color: growthColor }}>{growthLabel} so với kỳ trước</p></div>
+            <div className="stat-card"><h3>⏱ Giờ cao điểm</h3><p>{peakRevenue.toLocaleString()} VNĐ</p></div>
+            <div className="stat-card"><h3>🌙 Giờ thấp điểm</h3><p>{offPeakRevenue.toLocaleString()} VNĐ</p></div>
+          </div>
+
+          <div className="chart-grid">
+            <div className="chart-card">
+              <h4>Doanh thu 7 ngày gần nhất</h4>
+              <div className="line-chart">
+                <svg viewBox="0 0 620 180" preserveAspectRatio="none">
+                  <polyline fill="none" stroke="#0d6efd" strokeWidth="3" points={linePoints} />
+                  {chartDates.map((item, index) => {
+                    const x = 20 + index * 80;
+                    const y = 140 - Math.round((item.amount / lineMax) * 120);
+                    return (
+                      <g key={item.dayLabel}>
+                        <circle cx={x} cy={y} r="5" fill="#0d6efd" />
+                        <text x={x} y={y - 12} textAnchor="middle" fontSize="11" fill="#212529">{item.amount.toLocaleString()}</text>
+                        <text x={x} y="165" textAnchor="middle" fontSize="12" fill="#6c757d">{item.dayLabel}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h4>Doanh thu theo sân</h4>
+              <div className="bar-chart">
+                {courtRevenueData.map(item => (
+                  <div key={item.court.id} className="bar-row">
+                    <div className="bar-label">{item.court.name}</div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${Math.round((item.value / maxCourtRevenue) * 100)}%` }} />
+                    </div>
+                    <div className="bar-value">{item.value.toLocaleString()} VNĐ</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h4>Tỷ lệ giờ cao điểm vs thấp điểm</h4>
+              <div className="pie-chart">
+                <svg viewBox="0 0 160 160" className="pie-svg">
+                  <circle cx="80" cy="80" r="60" fill="#f8d7da" />
+                  <circle cx="80" cy="80" r="60" fill="none" stroke="#0d6efd" strokeWidth="120" strokeDasharray={`${peakPercent} ${100 - peakPercent}`} strokeDashoffset="25" transform="rotate(-90 80 80)" />
+                </svg>
+                <div className="pie-legend">
+                  <div><span className="legend-dot" style={{ background: '#0d6efd' }}></span> Cao điểm {peakPercent}%</div>
+                  <div><span className="legend-dot" style={{ background: '#f8d7da' }}></span> Thấp điểm {offPeakPercent}%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <h3>📋 Chi tiết doanh thu từ cọc</h3>
           <table className="admin-table">
             <thead><tr><th>Khách</th><th>Sân</th><th>Ngày</th><th>Giờ</th><th>Tổng</th><th>Cọc 50%</th><th>Còn lại</th><th>Trạng thái</th><th>TG còn lại</th></tr></thead>
@@ -299,6 +636,98 @@ export default function AdminDashboard({
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {activeTab === 'customers' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3>👥 QUẢN LÝ KHÁCH HÀNG</h3>
+              <p>Tìm kiếm và xem thống kê khách hàng theo đơn đặt sân.</p>
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm theo tên hoặc email"
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid #ccc', width: '280px' }}
+            />
+          </div>
+
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Khách hàng</th>
+                <th>Email</th>
+                <th>Đơn đã đặt</th>
+                <th>Doanh thu</th>
+                <th>Lần đặt gần nhất</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topCustomers.length > 0 ? topCustomers.map(item => (
+                <tr key={getUserId(item.user)}>
+                  <td>{getUserName(item.user)}</td>
+                  <td>{item.user.email || '—'}</td>
+                  <td>{item.totalBookings}</td>
+                  <td>{formatMoney(item.totalRevenue)}</td>
+                  <td>{formatDateLabel(item.lastBooking)}</td>
+                  <td>{getCustomerStatus(item)}</td>
+                  <td>
+                    <button
+                      onClick={() => handleSelectCustomer(item.user)}
+                      style={{ background: '#0d6efd', color: 'white', padding: '6px 10px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                    >Xem</button>
+                  </td>
+                </tr>
+              )) : (
+                <tr><td colSpan="7">Không tìm thấy khách hàng phù hợp.</td></tr>
+              )}
+            </tbody>
+          </table>
+
+          <div style={{ marginTop: '24px' }}>
+            {selectedCustomerData ? (
+              <div style={{ padding: '20px', borderRadius: '16px', background: '#f8f9fa' }}>
+                <h4>Thông tin chi tiết khách hàng</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                  <div><strong>Họ tên:</strong> {getUserName(selectedCustomerData.user)}</div>
+                  <div><strong>Email:</strong> {selectedCustomerData.user.email || '—'}</div>
+                  <div><strong>Tổng đơn:</strong> {selectedCustomerData.totalBookings}</div>
+                  <div><strong>Doanh thu:</strong> {formatMoney(selectedCustomerData.totalRevenue)}</div>
+                  <div><strong>Lần đặt gần nhất:</strong> {formatDateLabel(selectedCustomerData.lastBooking)}</div>
+                  <div><strong>Trạng thái:</strong> {getCustomerStatus(selectedCustomerData)}</div>
+                </div>
+
+                <div style={{ marginTop: '20px' }}>
+                  <h5>Đơn đặt của khách</h5>
+                  <table className="admin-table">
+                    <thead>
+                      <tr><th>Ngày</th><th>Giờ</th><th>Sân</th><th>Tổng</th><th>Trạng thái</th></tr>
+                    </thead>
+                    <tbody>
+                      {selectedCustomerData.bookings.length > 0 ? selectedCustomerData.bookings.map(booking => (
+                        <tr key={booking._id || booking.id}>
+                          <td>{booking.date}</td>
+                          <td>{booking.hour}:00</td>
+                          <td>{booking.courtName}</td>
+                          <td>{formatMoney(booking.total)}</td>
+                          <td>{booking.status === 'approved' ? 'Đã duyệt' : booking.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}</td>
+                        </tr>
+                      )) : (
+                        <tr><td colSpan="5">Chưa có đơn đặt.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <p>Chọn khách hàng để xem chi tiết.</p>
+            )}
+          </div>
         </div>
       )}
 
@@ -361,47 +790,129 @@ export default function AdminDashboard({
       )}
 
       {activeTab === 'bookings' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3>📋 TẤT CẢ YÊU CẦU ĐẶT SÂN</h3>
-            <button onClick={() => clearOldBookings && clearOldBookings()} style={{ background: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}>🗑 Dọn lịch cũ</button>
+        <div className="schedule-section">
+          <div className="schedule-header">
+            <div>
+              <h3>📋 LỊCH ĐẶT SÂN</h3>
+              <p>Chọn ngày để xem lịch của các sân và đặt nhanh cho admin.</p>
+            </div>
+            <div className="date-picker">
+              <label>Chọn ngày</label>
+              <input
+                type="date"
+                value={selectedDate}
+                min={currentDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+            </div>
           </div>
-          <table className="admin-table">
-            <thead><tr><th>Khách</th><th>Sân</th><th>Ngày</th><th>Giờ</th><th>Số giờ</th><th>Tổng tiền</th><th>Ảnh cọc</th><th>Trạng thái</th><th>TG còn lại</th><th>Hành động</th></tr></thead>
-            <tbody>
-              {bookingRequests.map(req => {
-                const playing = isCourtPlaying(req);
-                const completed = isBookingCompleted(req);
-                return (
-                  <tr key={req._id || req.id} style={{ backgroundColor: playing ? '#e8f5e9' : 'transparent' }}>
-                    <td>{getCustomerName(req)}</td>
-                    <td>{req.courtName}</td>
-                    <td>{req.date}</td>
-                    <td>{req.hour}:00 - {parseInt(req.hour) + (req.duration || 1)}:00</td>
-                    <td>{req.duration || 1}</td>
-                    <td>{(req.total || 0).toLocaleString()} VNĐ</td>
-                    <td>{req.paymentImage && <img src={req.paymentImage} alt="cọc" style={{ width: '50px', cursor: 'pointer' }} onClick={() => window.open(req.paymentImage)} />}</td>
-                    <td style={{ color: playing ? 'green' : (req.status === 'approved' ? (completed ? (remainingCollected.includes(String(req._id || req.id)) ? 'blue' : 'orange') : 'blue') : (req.status === 'pending' ? 'orange' : 'red')) }}>
-                      {playing ? '🟢 Đang hoạt động' : 
-                       req.status === 'approved' ? (completed ? (remainingCollected.includes(String(req._id || req.id)) ? '✅ Đã hoàn thành' : '💰 Chờ thanh toán') : '💰 Chờ thanh toán') :
-                       req.status === 'pending' ? '⏳ Chờ duyệt' : '❌ Đã hủy'}
-                    </td>
-                    <td>{req.status === 'approved' && !completed ? getRemainingTime(req) : (completed ? 'Đã kết thúc' : '')}</td>
-                    <td>
-                      {req.status === 'pending' && (
-                        <>
-                          <button onClick={() => handleApprove(req)} style={{ background: '#28a745', color: 'white', marginRight: '5px' }}>Duyệt</button>
-                          <button onClick={() => setShowRejectModal(req)} style={{ background: '#dc3545', color: 'white' }}>Từ chối</button>
-                        </>
-                      )}
-                      <button onClick={() => handleDelete(req)} style={{ background: '#6c757d', color: 'white' }}>Xóa</button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {bookingRequests.length === 0 && <tr><td colSpan="10">Chưa có yêu cầu</td></tr>}
-            </tbody>
-          </table>
+
+          <div className="schedule-legend">
+            <div className="legend-item"><span className="legend-dot" style={{ background: '#dff7e0' }}></span>Còn trống</div>
+            <div className="legend-item"><span className="legend-dot" style={{ background: '#f8d7da' }}></span>Đã đặt & duyệt</div>
+            <div className="legend-item"><span className="legend-dot" style={{ background: '#fff5cc' }}></span>Chờ duyệt</div>
+            <div className="legend-item"><span className="legend-dot" style={{ background: '#e2e3e5' }}></span>Đã hoàn thành / Kết thúc</div>
+          </div>
+
+          {safeCourts.length === 0 ? (
+            <p>Không có sân để hiển thị lịch.</p>
+          ) : (
+            <div className="schedule-grid" style={{ gridTemplateColumns: `160px repeat(${safeCourts.length}, minmax(140px, 1fr))` }}>
+              <div className="schedule-court-header schedule-corner">Giờ / Sân</div>
+              {safeCourts.map(court => (
+                <div key={court.id} className="schedule-court-header">{court.name}</div>
+              ))}
+
+              {scheduleHours.map(hour => (
+                <React.Fragment key={hour}>
+                  <div className="schedule-time-cell">{String(hour).padStart(2, '0')}:00</div>
+                  {safeCourts.map(court => {
+                    const booking = getSlotBooking(court, String(hour).padStart(2, '0'));
+                    return (
+                      <button
+                        type="button"
+                        key={`${court.id}-${hour}`}
+                        className={`slot-cell ${getSlotClass(booking)}`}
+                        onClick={() => booking ? handleBookedSlotClick(booking) : handleEmptySlotClick(court, hour)}
+                      >
+                        <span>{getSlotLabel(booking)}</span>
+                        {booking && <span className="slot-subtext">{booking.courtName}</span>}
+                      </button>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+          {detailBooking && (
+            <div className="modal-overlay">
+              <div className="modal-box admin-schedule-modal">
+                <h3>Chi tiết đơn đặt sân</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                  <div><strong>Sân:</strong> {detailBooking.courtName}</div>
+                  <div><strong>Ngày:</strong> {detailBooking.date}</div>
+                  <div><strong>Giờ:</strong> {detailBooking.hour}:00</div>
+                  <div><strong>Thời lượng:</strong> {detailBooking.duration || 1} giờ</div>
+                  <div><strong>Khách hàng:</strong> {getCustomerName(detailBooking)}</div>
+                  <div><strong>Trạng thái:</strong> {detailBooking.status === 'approved' ? 'Đã duyệt' : detailBooking.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}</div>
+                </div>
+                <div className="total-box">Tổng tiền: <strong>{(detailBooking.total || 0).toLocaleString()} VNĐ</strong></div>
+                {detailBooking.paymentImage && (
+                  <div style={{ marginTop: '12px' }}>
+                    <strong>Ảnh cọc:</strong>
+                    <img src={detailBooking.paymentImage} alt="payment" style={{ width: '100%', borderRadius: '12px', marginTop: '8px' }} />
+                  </div>
+                )}
+                <div className="modal-actions">
+                  <button className="btn-cancel" onClick={() => setDetailBooking(null)}>Đóng</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {quickBooking && (
+            <div className="modal-overlay">
+              <div className="modal-box admin-schedule-modal">
+                <h3>Đặt sân nhanh</h3>
+                <p>Hãy điền thông tin để tạo đơn mới ngay cho slot trống.</p>
+                <div className="form-group">
+                  <label>Sân</label>
+                  <input type="text" value={quickBooking.court.name} disabled />
+                </div>
+                <div className="form-group">
+                  <label>Ngày</label>
+                  <input type="text" value={quickBooking.date} disabled />
+                </div>
+                <div className="form-group">
+                  <label>Giờ</label>
+                  <input type="text" value={`${quickBooking.hour}:00`} disabled />
+                </div>
+                <div className="form-group">
+                  <label>Tên khách hàng</label>
+                  <input value={quickCustomerName} onChange={e => setQuickCustomerName(e.target.value)} placeholder="Nhập tên khách" />
+                </div>
+                <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label>Số giờ</label>
+                    <input type="number" min="1" max="5" value={quickDuration} onChange={e => setQuickDuration(Math.max(1, Number(e.target.value) || 1))} />
+                  </div>
+                  <div>
+                    <label>Trạng thái</label>
+                    <select value={quickStatus} onChange={e => setQuickStatus(e.target.value)}>
+                      <option value="approved">Đã duyệt</option>
+                      <option value="pending">Chờ duyệt</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="total-box">Tổng tiền: <strong>{calculateQuickPrice(quickBooking.court, quickBooking.hour, quickDuration).toLocaleString()} VNĐ</strong></div>
+                <div className="modal-actions">
+                  <button className="btn-cancel" onClick={() => setQuickBooking(null)}>Hủy</button>
+                  <button className="btn-confirm" onClick={submitQuickBooking}>Đặt nhanh</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
