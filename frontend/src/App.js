@@ -164,8 +164,7 @@ function App() {
   const headerItems = [
     { label: '🏠 TRANG CHỦ', page: 'home', visible: true },
     { label: '🔎 TRA CỨU ĐƠN', page: 'order-lookup', visible: true },
-    { label: '📋 LỊCH ĐẶT SÂN', page: 'my-bookings', visible: true },
-    { label: '❤️ YÊU THÍCH', page: 'favorites', visible: true },
+    { label: '📋 LỊCH ĐẶT SÂN', page: 'my-bookings', visible: !isAdmin },
     { label: '🗺️ BẢN ĐỒ', page: 'map', visible: true },
     { label: '📞 LIÊN HỆ', page: 'contact', visible: !isAdmin },
     { label: '👑 QUẢN TRỊ', page: 'admin', visible: isAdmin, className: 'admin-link' },
@@ -956,21 +955,19 @@ function App() {
             )}
           </>
         )}
-        {page === 'my-bookings' && (
-          isAdmin ? (
-            <ScheduleViewer courts={courts} bookingRequests={bookingRequests} />
-          ) : isUser ? (
-            <BookingHistory bookingRequests={bookingRequests} user={user} cancelBooking={cancelBooking} adminPhone="0339310915" highlightBookingId={selectedBookingId} />
-          ) : (
-            <div className="guest-login-prompt" style={{ padding: '40px 10%', textAlign: 'center' }}>
-              <h2>🔒 Vui lòng đăng nhập để xem lịch đặt sân</h2>
-              <p>Bạn cần đăng nhập để truy cập trang lịch đặt sân và xem chi tiết booking.</p>
-              <button className="btn-primary" onClick={() => { setPage('auth'); setAuthMode('login'); }}>
-                ĐĂNG NHẬP NGAY
-              </button>
-            </div>
-          )
-        )}
+{page === 'my-bookings' && (
+  isUser ? (
+    <BookingHistory bookingRequests={bookingRequests} user={user} cancelBooking={cancelBooking} adminPhone="0339310915" highlightBookingId={selectedBookingId} />
+  ) : !isAdmin ? (
+    <div className="guest-login-prompt" style={{ padding: '40px 10%', textAlign: 'center' }}>
+      <h2>🔒 Vui lòng đăng nhập để xem lịch đặt sân</h2>
+      <p>Bạn cần đăng nhập để truy cập trang lịch đặt sân và xem chi tiết booking.</p>
+      <button className="btn-primary" onClick={() => { setPage('auth'); setAuthMode('login'); }}>
+        ĐĂNG NHẬP NGAY
+      </button>
+    </div>
+  ) : null
+)}
         {page === 'notifications' && isAuthenticated && (
           <NotificationsPage
             notifications={userNotifications}
@@ -1148,30 +1145,6 @@ function App() {
             </div>
           </div>
         </div>
-      )}
-
-      {selectedCourt && page !== 'court-detail' && (
-        <BookingModal
-          user={user}
-          selectedCourt={selectedCourt}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          selectedHour={selectedHour}
-          setSelectedHour={setSelectedHour}
-          duration={duration}
-          setDuration={setDuration}
-          showDepositStep={showDepositStep}
-          setShowDepositStep={setShowDepositStep}
-          handleUpload={(e, courtId) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onloadend = () => setPaymentProof({ ...paymentProof, [courtId]: reader.result }); reader.readAsDataURL(file); }}
-          paymentProof={paymentProof}
-          calculatePrice={calculatePrice}
-          handleBooking={submitBookingRequest}
-          schedule={{}}
-          setSelectedCourt={setSelectedCourt}
-          clearOldBookings={clearOldBookings}
-          bookingRequests={bookingRequests}
-          onGoToPayment={goToPayment}
-        />
       )}
 
       {showSuccessPopup && <SuccessPopup onClose={() => setShowSuccessPopup(false)} />}
