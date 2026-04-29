@@ -163,7 +163,7 @@ function App() {
 
   const headerItems = [
     { label: '🏠 TRANG CHỦ', page: 'home', visible: true },
-    { label: '🔎 TRA CỨU ĐƠN', page: 'order-lookup', visible: true },
+    { label: '🔎 TRA CỨU ĐƠN', page: 'order-lookup', visible: !user },
     { label: '📋 LỊCH ĐẶT SÂN', page: 'my-bookings', visible: !isAdmin },
     { label: '🗺️ BẢN ĐỒ', page: 'map', visible: true },
     { label: '📞 LIÊN HỆ', page: 'contact', visible: !isAdmin },

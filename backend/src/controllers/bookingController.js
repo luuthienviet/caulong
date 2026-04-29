@@ -61,28 +61,55 @@ export const createBooking = async (req, res, next) => {
     if (req.user.role === 'admin') {
       return res.status(403).json({ message: "Admin không được phép đặt sân" });
     }
-    const { courtId, courtName, date, hour, duration, total, paymentImage, status } = req.body;
+
+    const { courtId, courtName, date, hour, duration, total, paymentImage } = req.body;
     const userId = req.user.id;
-    const existing = await Booking.findOne({ courtId, date, hour, status: 'approved' });
-    if (existing) return res.status(400).json({ message: "Khung giờ đã có người đặt" });
-    const finalStatus = 'pending';
-    const booking = await Booking.create({ courtId, courtName, userId, date, hour, duration, total, paymentImage, status: finalStatus });
+
+    // ✅ FIX: Chặn cả approved lẫn pending — tránh 2 khách đặt cùng 1 khung giờ
+    const existing = await Booking.findOne({
+      courtId,
+      date,
+      hour,
+      status: { $in: ['approved', 'pending'] }
+    });
+
+    if (existing) {
+      const message = existing.status === 'approved'
+        ? "Khung giờ này đã có người đặt và được duyệt. Vui lòng chọn giờ khác."
+        : "Khung giờ này đang có người chờ duyệt. Vui lòng chọn giờ khác.";
+      return res.status(400).json({ message });
+    }
+
+    const booking = await Booking.create({
+      courtId, courtName, userId, date, hour, duration, total, paymentImage,
+      status: 'pending'
+    });
+
     const user = await User.findById(userId);
     const admin = await User.findOne({ role: 'admin' });
-    if (admin && admin.email) {
-      await sendEmail(admin.email, "Yêu cầu đặt sân mới", `<p>Khách ${user.username} đặt sân ${courtName} ngày ${date} lúc ${hour}:00. Vui lòng duyệt.</p>`);
+
+    if (admin?.email) {
+      await sendEmail(
+        admin.email,
+        "Yêu cầu đặt sân mới",
+        `<p>Khách <strong>${user.username}</strong> đặt sân <strong>${courtName}</strong> ngày <strong>${date}</strong> lúc <strong>${hour}:00</strong>. Vui lòng duyệt.</p>`
+      );
     }
-    if (user && user.email) {
-      await sendEmail(user.email, "Đặt sân thành công", `<p>Yêu cầu của bạn đã được gửi, chờ duyệt.</p>`);
+    if (user?.email) {
+      await sendEmail(
+        user.email,
+        "Đặt sân thành công – Đang chờ duyệt",
+        `<p>Yêu cầu đặt sân <strong>${courtName}</strong> ngày <strong>${date}</strong> lúc <strong>${hour}:00</strong> đã được gửi. Vui lòng chờ xác nhận từ quản trị viên.</p>`
+      );
     }
-    if (user) {
-      await Notification.create({
-        userId: userId,
-        bookingId: booking._id,
-        message: `Đơn #${booking._id} đã được gửi. Vui lòng chờ xác nhận.`,
-        type: 'booking_created'
-      });
-    }
+
+    await Notification.create({
+      userId,
+      bookingId: booking._id,
+      message: `Đơn #${booking._id} đã được gửi. Vui lòng chờ xác nhận.`,
+      type: 'booking_created'
+    });
+
     res.status(201).json({ success: true, data: booking });
   } catch (error) { next(error); }
 };
@@ -91,13 +118,37 @@ export const updateBookingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const booking = await Booking.findByIdAndUpdate(id, { status }, { new: true }).populate('userId', 'username name email phone');
+
+    // ✅ Nếu admin duyệt (approved), kiểm tra xem khung giờ đó đã có booking approved chưa
+    if (status === 'approved') {
+      const booking = await Booking.findById(id);
+      if (!booking) return res.status(404).json({ message: "Không tìm thấy đơn" });
+
+      const conflict = await Booking.findOne({
+        _id: { $ne: id },
+        courtId: booking.courtId,
+        date: booking.date,
+        hour: booking.hour,
+        status: 'approved'
+      });
+
+      if (conflict) {
+        return res.status(400).json({
+          message: `Khung giờ ${booking.hour}:00 ngày ${booking.date} của ${booking.courtName} đã được duyệt cho một đơn khác. Vui lòng từ chối đơn này.`
+        });
+      }
+    }
+
+    const booking = await Booking.findByIdAndUpdate(
+      id, { status }, { new: true }
+    ).populate('userId', 'username name email phone');
+
     if (!booking) return res.status(404).json({ message: "Không tìm thấy" });
-    
-    // Tạo thông báo cho khách hàng
+
     if (status === 'approved' || status === 'rejected') {
       let message = '';
-      let typeValue = 'booking_rejected';
+      let typeValue = '';
+
       if (status === 'approved') {
         message = `✅ Đơn #${booking._id} đặt sân ${booking.courtName} ngày ${booking.date} lúc ${booking.hour}:00 đã được duyệt.`;
         typeValue = 'booking_approved';
@@ -105,6 +156,7 @@ export const updateBookingStatus = async (req, res, next) => {
         message = `❌ Đơn #${booking._id} đặt sân ${booking.courtName} ngày ${booking.date} lúc ${booking.hour}:00 bị từ chối.`;
         typeValue = 'booking_rejected';
       }
+
       await Notification.create({
         userId: booking.userId._id,
         bookingId: booking._id,
@@ -112,7 +164,7 @@ export const updateBookingStatus = async (req, res, next) => {
         type: typeValue
       });
     }
-    
+
     res.status(200).json({ success: true, data: booking });
   } catch (error) { next(error); }
 };
