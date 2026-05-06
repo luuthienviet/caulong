@@ -65,7 +65,6 @@ export const createBooking = async (req, res, next) => {
     const { courtId, courtName, date, hour, duration, total, paymentImage } = req.body;
     const userId = req.user.id;
 
-    // ✅ FIX: Chặn cả approved lẫn pending — tránh 2 khách đặt cùng 1 khung giờ
     const existing = await Booking.findOne({
       courtId,
       date,
@@ -88,19 +87,20 @@ export const createBooking = async (req, res, next) => {
     const user = await User.findById(userId);
     const admin = await User.findOne({ role: 'admin' });
 
+    // ✅ FIX: Không await email — gửi bất đồng bộ, không chặn response
     if (admin?.email) {
-      await sendEmail(
+      sendEmail(
         admin.email,
         "Yêu cầu đặt sân mới",
         `<p>Khách <strong>${user.username}</strong> đặt sân <strong>${courtName}</strong> ngày <strong>${date}</strong> lúc <strong>${hour}:00</strong>. Vui lòng duyệt.</p>`
-      );
+      ).catch(err => console.error('Email admin error:', err));
     }
     if (user?.email) {
-      await sendEmail(
+      sendEmail(
         user.email,
         "Đặt sân thành công – Đang chờ duyệt",
         `<p>Yêu cầu đặt sân <strong>${courtName}</strong> ngày <strong>${date}</strong> lúc <strong>${hour}:00</strong> đã được gửi. Vui lòng chờ xác nhận từ quản trị viên.</p>`
-      );
+      ).catch(err => console.error('Email user error:', err));
     }
 
     await Notification.create({
@@ -119,7 +119,6 @@ export const updateBookingStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // ✅ Nếu admin duyệt (approved), kiểm tra xem khung giờ đó đã có booking approved chưa
     if (status === 'approved') {
       const booking = await Booking.findById(id);
       if (!booking) return res.status(404).json({ message: "Không tìm thấy đơn" });
