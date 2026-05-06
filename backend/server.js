@@ -13,23 +13,17 @@ dotenv.config();
 
 const app = express();
 
-// ========== CẤU HÌNH CORS CHO PRODUCTION ==========
-// Trong quá trình phát triển, bạn có thể để localhost:3000
-// Khi lên production, thay bằng URL thật của frontend
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-app.use(cors({
-  origin: FRONTEND_URL,
-  credentials: true
-}));
+// ========== CẤU HÌNH CORS ==========
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Cho phép requests không có origin (như từ Postman, mobile apps)
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'CORS policy does not allow access from this origin.';
-      return callback(new Error(msg), false);
+      return callback(new Error('CORS policy does not allow access from this origin.'), false);
     }
     return callback(null, true);
   },
