@@ -9,21 +9,40 @@ import { errorHandler } from "./src/middleware/errorHandler.js";
 import reviewRoutes from './src/routes/reviewRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 
-
 dotenv.config();
 
 const app = express();
 
-// CORS cấu hình đơn giản nhưng đủ
+// ========== CẤU HÌNH CORS CHO PRODUCTION ==========
+// Trong quá trình phát triển, bạn có thể để localhost:3000
+// Khi lên production, thay bằng URL thật của frontend
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: FRONTEND_URL,
   credentials: true
+}));
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Cho phép requests không có origin (như từ Postman, mobile apps)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'CORS policy does not allow access from this origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
 
 connectDB();
 
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/courts", courtRoutes);
