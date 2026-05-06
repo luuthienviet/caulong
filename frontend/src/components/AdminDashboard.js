@@ -350,15 +350,16 @@ export default function AdminDashboard({
     }
     const total = calculateQuickPrice(quickBooking.court, quickBooking.hour, quickDuration);
     try {
-      await API.post('/bookings', {
-        courtId: quickBooking.court.id,
-        courtName: quickBooking.court.name,
-        date: quickBooking.date,
-        hour: quickBooking.hour,
-        duration: quickDuration,
-        total,
-        status: quickStatus
-      });
+await API.post('/bookings/admin-booking', {
+  courtId: quickBooking.court.id,
+  courtName: quickBooking.court.name,
+  date: quickBooking.date,
+  hour: quickBooking.hour,
+  duration: quickDuration,
+  total,
+  customerName: quickCustomerName,
+  status: quickStatus
+});
       alert('Đặt sân nhanh thành công');
       setQuickBooking(null);
       refreshBookings && refreshBookings();

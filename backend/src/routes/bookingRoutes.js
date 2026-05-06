@@ -4,6 +4,7 @@ import {
   getAllBookings,
   getUserBookings,
   createBooking,
+  adminCreateBooking,
   updateBookingStatus,
   deleteBooking
 } from "../controllers/bookingController.js";
@@ -26,5 +27,8 @@ router.delete("/:id", deleteBooking);
 // Routes cho admin
 router.get("/", adminMiddleware, getAllBookings);
 router.put("/:id/status", adminMiddleware, updateBookingStatus);
+
+// ✅ Admin đặt sân hộ khách
+router.post("/admin-booking", adminMiddleware, adminCreateBooking);
 
 export default router;
