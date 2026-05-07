@@ -8,9 +8,10 @@ import BookingModal from "./components/BookingModal";
 import SuccessPopup from "./components/SuccessPopup";
 import BookingHistory from "./components/BookingHistory";
 import ScheduleViewer from "./components/ScheduleViewer";
-import AdminDashboard from "./components/AdminDashboard";
+import AdminDashboardModern from "./components/AdminDashboardModern";
 import API from './api';
 import './App.css';
+import './styles/dashboard.css';
 import NotificationsPage from "./components/NotificationsPage";
 import OrderLookupPage from "./components/OrderLookupPage";
 import CourtEditModal from "./components/CourtEditModal";
@@ -1001,7 +1002,7 @@ function App() {
           />
         )}
         {page === 'admin' && isAuthenticated && user?.role === 'admin' && (
-          <AdminDashboard
+          <AdminDashboardModern
             bookingRequests={bookingRequests}
             users={users}
             approveBooking={approveBooking}
@@ -1011,6 +1012,8 @@ function App() {
             courts={courts}
             setCourts={setCourts}
             refreshBookings={fetchAllBookings}
+            user={user}
+            setPage={setPage}
           />
         )}
         {page === 'payment' && (
