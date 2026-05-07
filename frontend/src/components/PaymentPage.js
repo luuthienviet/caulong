@@ -72,7 +72,8 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
         total: totalPrice,
         paymentImage: null,
         status: "pending",
-        paymentMethod: "tại sân"
+        paymentMethod: "tại sân",
+        paymentStatus: "pending"
       };
       await handleBooking(newBooking);
       setLoading(false);
@@ -121,6 +122,7 @@ export default function PaymentPage({ bookingData, setPage, handleBooking }) {
       paymentImage: uploadedImage,
       status: "pending",
       paymentMethod: "chuyển khoản cọc",
+      paymentStatus: "deposit_sent",
       phone: phoneNumber,
       transferContent: transferContent
     };

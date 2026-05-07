@@ -57,7 +57,21 @@ export const createBooking = async (req, res, next) => {
     if (req.user.role === 'admin') {
       return res.status(403).json({ message: "Admin dùng route /admin-booking để đặt hộ khách" });
     }
-    const { courtId, courtName, date, hour, duration, total, paymentImage } = req.body;
+    const {
+      courtId,
+      courtName,
+      date,
+      hour,
+      duration,
+      total,
+      paymentImage,
+      paymentMethod,
+      customerName,
+      customerPhone,
+      customerNote,
+      transferContent,
+      paymentStatus
+    } = req.body;
     const userId = req.user.id;
     const existing = await Booking.findOne({ courtId, date, hour, status: { $in: ['approved', 'pending'] } });
     if (existing) {
@@ -66,7 +80,23 @@ export const createBooking = async (req, res, next) => {
         : "Khung giờ này đang có người chờ duyệt. Vui lòng chọn giờ khác.";
       return res.status(400).json({ message });
     }
-    const booking = await Booking.create({ courtId, courtName, userId, date, hour, duration, total, paymentImage, status: 'pending' });
+    const booking = await Booking.create({
+      courtId,
+      courtName,
+      userId,
+      date,
+      hour,
+      duration,
+      total,
+      paymentImage,
+      paymentMethod: paymentMethod || (paymentImage ? 'chuyển khoản cọc' : 'tại sân'),
+      paymentStatus: paymentStatus || (paymentImage ? 'deposit_sent' : 'pending'),
+      customerName,
+      customerPhone,
+      customerNote,
+      transferContent,
+      status: 'pending'
+    });
     const user = await User.findById(userId);
     const admin = await User.findOne({ role: 'admin' });
     if (admin?.email) {
@@ -87,7 +117,22 @@ export const createBooking = async (req, res, next) => {
 // ✅ ADMIN đặt sân hộ khách
 export const adminCreateBooking = async (req, res, next) => {
   try {
-    const { courtId, courtName, date, hour, duration, total, customerName, status } = req.body;
+    const {
+      courtId,
+      courtName,
+      date,
+      hour,
+      duration,
+      total,
+      customerName,
+      customerPhone,
+      paymentMethod,
+      status,
+      paymentImage,
+      paymentStatus,
+      customerNote,
+      transferContent
+    } = req.body;
     if (!courtId || !courtName || !date || !hour || !customerName) {
       return res.status(400).json({ message: "Thiếu thông tin đặt sân" });
     }
@@ -103,12 +148,20 @@ export const adminCreateBooking = async (req, res, next) => {
     if (matchedUser) userId = matchedUser._id;
 
     const booking = await Booking.create({
-      courtId, courtName,
+      courtId,
+      courtName,
       userId,
       customerName,
-      date, hour,
+      customerPhone,
+      date,
+      hour,
       duration: duration || 1,
       total: total || 0,
+      paymentMethod: paymentMethod || 'cash',
+      paymentStatus: paymentStatus || 'paid',
+      paymentImage,
+      customerNote,
+      transferContent,
       status: status || 'approved'
     });
     res.status(201).json({ success: true, data: booking });
@@ -140,7 +193,20 @@ export const updateBookingStatus = async (req, res, next) => {
     res.status(200).json({ success: true, data: booking });
   } catch (error) { next(error); }
 };
+export const updateBookingPayment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { paymentStatus, paymentMethod, paymentReceived } = req.body;
+    const updateData = {};
+    if (paymentStatus) updateData.paymentStatus = paymentStatus;
+    if (paymentMethod) updateData.paymentMethod = paymentMethod;
+    if (paymentReceived != null) updateData.paymentReceived = paymentReceived;
 
+    const booking = await Booking.findByIdAndUpdate(id, updateData, { new: true }).populate('userId', 'username name email phone');
+    if (!booking) return res.status(404).json({ message: "Không tìm thấy" });
+    res.status(200).json({ success: true, data: booking });
+  } catch (error) { next(error); }
+};
 export const deleteBooking = async (req, res, next) => {
   try {
     const { id } = req.params;

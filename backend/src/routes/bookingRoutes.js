@@ -6,6 +6,7 @@ import {
   createBooking,
   adminCreateBooking,
   updateBookingStatus,
+  updateBookingPayment,
   deleteBooking
 } from "../controllers/bookingController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
@@ -27,6 +28,7 @@ router.delete("/:id", deleteBooking);
 // Routes cho admin
 router.get("/", adminMiddleware, getAllBookings);
 router.put("/:id/status", adminMiddleware, updateBookingStatus);
+router.put("/:id/payment", adminMiddleware, updateBookingPayment);
 
 // ✅ Admin đặt sân hộ khách
 router.post("/admin-booking", adminMiddleware, adminCreateBooking);

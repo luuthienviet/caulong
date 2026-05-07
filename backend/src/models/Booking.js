@@ -34,6 +34,28 @@ const bookingSchema = new mongoose.Schema({
   paymentImage: {
     type: String
   },
+  paymentMethod: {
+    type: String,
+    enum: ["tại sân", "chuyển khoản cọc", "cash", "transfer"],
+    default: "tại sân"
+  },
+  paymentStatus: {
+    type: String,
+    enum: ["pending", "deposit_sent", "paid", "remaining_paid"],
+    default: "pending"
+  },
+  customerName: {
+    type: String
+  },
+  customerPhone: {
+    type: String
+  },
+  customerNote: {
+    type: String
+  },
+  transferContent: {
+    type: String
+  },
   status: {
     type: String,
     enum: ["pending", "approved", "rejected"],

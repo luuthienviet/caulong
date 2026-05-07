@@ -34,10 +34,6 @@ export default function AdminDashboard({
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [expandedOnlineId, setExpandedOnlineId] = useState(null);
-  const [remainingCollected, setRemainingCollected] = useState(() => {
-    const saved = localStorage.getItem('remainingCollected');
-    return saved ? JSON.parse(saved) : [];
-  });
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   const safeCourts = Array.isArray(courts) ? courts.filter(c => c && typeof c === 'object' && c.id) : [];
@@ -46,10 +42,6 @@ export default function AdminDashboard({
     const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('remainingCollected', JSON.stringify(remainingCollected));
-  }, [remainingCollected]);
 
   const getBookingEndTime = (booking) => {
     if (!booking || !booking.date || !booking.hour) return new Date();
@@ -96,7 +88,7 @@ export default function AdminDashboard({
   const getRemaining = (b) => (b.total || 0) - getDeposit(b);
 
   const pendingRemainingBookings = bookingRequests.filter(b => 
-    b.status === 'approved' && isBookingCompleted(b) && !remainingCollected.includes(String(b._id || b.id))
+    b.status === 'approved' && isBookingCompleted(b) && b.paymentStatus !== 'remaining_paid' && b.paymentStatus !== 'paid'
   );
 
   const getCustomerName = (booking) => {
@@ -305,11 +297,15 @@ export default function AdminDashboard({
     }
   };
 
-  const handleConfirmRemaining = (booking) => {
-    const id = String(booking._id || booking.id);
-    if (!remainingCollected.includes(id)) {
-      setRemainingCollected([...remainingCollected, id]);
+  const handleConfirmRemaining = async (booking) => {
+    const id = booking._id || booking.id;
+    if (!id) return;
+    try {
+      await API.put(`/bookings/${id}/payment`, { paymentStatus: 'remaining_paid' });
       alert(`Đã thu ${getRemaining(booking).toLocaleString()} VNĐ từ ${getCustomerName(booking)}`);
+      refreshBookings && refreshBookings();
+    } catch (error) {
+      alert('Cập nhật trạng thái thu tiền thất bại');
     }
   };
 
@@ -467,12 +463,14 @@ export default function AdminDashboard({
           </div>
           <h3>📋 Chi tiết doanh thu từ cọc</h3>
           <table className="admin-table">
-            <thead><tr><th>Khách</th><th>Sân</th><th>Ngày</th><th>Giờ</th><th>Tổng</th><th>Cọc 50%</th><th>Còn lại</th><th>Trạng thái</th><th>TG còn lại</th></tr></thead>
+            <thead><tr><th>Khách</th><th>Sân</th><th>Ngày</th><th>Giờ</th><th>Tổng</th><th>Cọc 50%</th><th>Còn lại</th><th>Trạng thái thanh toán</th><th>TG còn lại</th></tr></thead>
             <tbody>
               {bookingRequests.filter(b => b.status === 'approved').map(b => {
                 const completed = isBookingCompleted(b);
-                const paid = remainingCollected.includes(String(b._id || b.id));
-                return (<tr key={b._id||b.id}><td>{getCustomerName(b)}</td><td>{b.courtName}</td><td>{b.date}</td><td>{b.hour}:00</td><td>{(b.total||0).toLocaleString()} VNĐ</td><td>{getDeposit(b).toLocaleString()} VNĐ</td><td>{getRemaining(b).toLocaleString()} VNĐ</td><td style={{color: !completed?'blue':(paid?'green':'orange')}}>{!completed?'🟢 Đang hoạt động':(paid?'✅ Đã hoàn thành':'💰 Chờ thanh toán')}</td><td>{!completed?getRemainingTime(b):'Đã kết thúc'}</td></tr>);
+                const paid = b.paymentStatus === 'remaining_paid' || b.paymentStatus === 'paid';
+                const statusLabel = !completed ? '🟢 Đang hoạt động' : paid ? '✅ Đã thu hết' : '💰 Chờ thu tiền';
+                const statusColor = !completed ? 'blue' : paid ? 'green' : 'orange';
+                return (<tr key={b._id||b.id}><td>{getCustomerName(b)}</td><td>{b.courtName}</td><td>{b.date}</td><td>{b.hour}:00</td><td>{(b.total||0).toLocaleString()} VNĐ</td><td>{getDeposit(b).toLocaleString()} VNĐ</td><td>{getRemaining(b).toLocaleString()} VNĐ</td><td style={{color: statusColor}}>{statusLabel}</td><td>{!completed?getRemainingTime(b):'Đã kết thúc'}</td></tr>);
               })}
               {!bookingRequests.some(b => b.status==='approved') && <tr><td colSpan="9">Chưa có đơn duyệt</td></tr>}
             </tbody>
