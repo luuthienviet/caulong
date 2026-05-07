@@ -21,10 +21,11 @@ export const login = async (req, res, next) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (!user) return res.status(400).json({ message: "Sai tài khoản" });
+    if (user.isLocked) return res.status(403).json({ message: "Tài khoản này đã bị khóa" });
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Sai mật khẩu" });
     const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.json({ token, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '' } });
+    res.json({ token, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '', isLocked: user.isLocked } });
   } catch (error) { next(error); }
 };
 
@@ -72,8 +73,20 @@ export const changePassword = async (req, res, next) => {
 
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find({ role: 'user' }).select('username name email phone createdAt');
+    const users = await User.find({ role: 'user' }).select('username name email phone createdAt isLocked');
     res.status(200).json({ success: true, data: users });
+  } catch (error) { next(error); }
+};
+
+export const toggleUserLock = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { isLocked } = req.body;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'Người dùng không tồn tại' });
+    user.isLocked = Boolean(isLocked);
+    await user.save();
+    res.status(200).json({ success: true, data: { id: user._id, isLocked: user.isLocked } });
   } catch (error) { next(error); }
 };
 

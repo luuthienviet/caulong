@@ -95,7 +95,7 @@ export default function DashboardStats({ activeCourts, totalBookingsToday, reven
         />
         <StatCard
           icon={DollarSign}
-          label="Revenue Today"
+          label="Doanh thu hôm nay"
           value={`${revenueToday.toLocaleString()}đ`}
           subtext="Tổng thu nhập"
           gradient="from-emerald-600 to-teal-600"

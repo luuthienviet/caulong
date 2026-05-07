@@ -10,6 +10,8 @@ import reviewRoutes from './src/routes/reviewRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 
 dotenv.config();
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 // DEBUG MONGO URI
 console.log("MONGO_URI =", process.env.MONGO_URI);

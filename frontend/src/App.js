@@ -1014,6 +1014,7 @@ function App() {
             courts={courts}
             setCourts={setCourts}
             refreshBookings={fetchAllBookings}
+            refreshUsers={fetchUsers}
             user={user}
             setPage={setPage}
           />

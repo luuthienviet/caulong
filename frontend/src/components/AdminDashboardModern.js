@@ -3,7 +3,9 @@ import DashboardHeader from './DashboardHeader';
 import DashboardStats from './DashboardStats';
 import RevenueAnalytics from './RevenueAnalytics';
 import CourtPerformance from './CourtPerformance';
-import API from '../api';
+import AdminBookingRequests from './AdminBookingRequests';
+import AdminCustomerManagement from './AdminCustomerManagement';
+import AdminPaymentManagement from './AdminPaymentManagement';
 
 export default function AdminDashboardModern({ 
   bookingRequests = [], 
@@ -15,11 +17,14 @@ export default function AdminDashboardModern({
   courts = [], 
   setCourts,
   refreshBookings,
+  refreshUsers,
   user,
-  setPage
+  setPage,
+  showHeader = true
 }) {
   const [revenueFilter, setRevenueFilter] = useState('week');
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
@@ -153,7 +158,7 @@ export default function AdminDashboardModern({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <DashboardHeader user={user} onLogout={() => setPage('home')} />
+      {showHeader && <DashboardHeader user={user} onLogout={() => setPage('home')} />}
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         {/* Dashboard Stats */}
@@ -187,6 +192,47 @@ export default function AdminDashboardModern({
           maxCourtRevenue={maxCourtRevenue}
           currentPeriodBookings={currentPeriodBookings}
         />
+
+        <div className="my-12 border-t border-gray-200/50"></div>
+
+        {/* Booking Management */}
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-sm text-blue-600 font-semibold uppercase tracking-[0.2em]">Quản lý đặt sân</p>
+              <h2 className="text-2xl font-bold text-slate-900">Danh sách đơn đặt sân</h2>
+              <p className="mt-2 text-sm text-slate-500 max-w-2xl">Tìm kiếm, lọc và xử lý các đơn đặt sân ngay trong một trang quản trị hiện đại.</p>
+            </div>
+            <button
+              onClick={() => clearOldBookings && clearOldBookings()}
+              className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              🧹 Dọn lịch cũ
+            </button>
+          </div>
+
+          <AdminBookingRequests
+            bookingRequests={bookingRequests}
+            approveBooking={approveBooking}
+            rejectBooking={rejectBooking}
+            deleteBooking={deleteBooking}
+            clearOldBookings={clearOldBookings}
+            courts={courts}
+            refreshBookings={refreshBookings}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+          />
+
+          <AdminCustomerManagement
+            users={users}
+            bookingRequests={bookingRequests}
+            refreshUsers={refreshUsers}
+          />
+
+          <AdminPaymentManagement
+            bookingRequests={bookingRequests}
+          />
+        </div>
 
         {/* Footer Spacing */}
         <div className="mt-12 mb-6 text-center text-sm text-gray-500">

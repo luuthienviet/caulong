@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import API from "../api";
 
 export default function AdminBookingRequests({
@@ -24,6 +24,8 @@ export default function AdminBookingRequests({
   const [walkInDuration, setWalkInDuration] = useState(1);
   const [walkInPayment, setWalkInPayment] = useState("cash");
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const today = new Date().toISOString().split("T")[0];
   const date = selectedDate || today;
@@ -69,6 +71,40 @@ export default function AdminBookingRequests({
     return { bg: "#f5f5f5", color: "#ccc", label: "—", clickable: false };
   };
 
+  const getStatusKey = (req) => {
+    if (req.status === "rejected") return "rejected";
+    if (req.status === "pending") return "pending";
+    if (req.status === "approved") {
+      if (isCourtPlaying(req)) return "playing";
+      if (isExpired(req)) return "completed";
+      return "approved";
+    }
+    return "pending";
+  };
+
+  const getPaymentLabel = (req) => {
+    if (req.paymentImage || req.paymentMethod === "transfer") return "Chuyển khoản";
+    if (req.paymentMethod === "cash") return "Tiền mặt";
+    return req.paymentMethod || "Chưa rõ";
+  };
+
+  const normalizeText = (value) => String(value || "").toLowerCase();
+
+  const filteredRequests = useMemo(() => {
+    const query = normalizeText(searchQuery);
+    return bookingRequests.filter((req) => {
+      const statusKey = getStatusKey(req);
+      const matchesStatus = statusFilter === "all" || statusKey === statusFilter;
+      const matchesSearch = !query || [
+        req.customerName,
+        req.userId?.username,
+        req.phone,
+        req.userId?.phone,
+      ].some((value) => normalizeText(value).includes(query));
+      return matchesStatus && matchesSearch;
+    });
+  }, [bookingRequests, searchQuery, statusFilter]);
+
   const calculatePrice = (court, hour, duration) => {
     if (!court || hour == null) return 0;
     const h = Number(hour);
@@ -113,7 +149,7 @@ export default function AdminBookingRequests({
     setLoading(false);
   };
 
-  const sortedRequests = [...bookingRequests].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+  const sortedRequests = [...filteredRequests].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
   return (
     <div style={{ padding: "0" }}>
@@ -150,105 +186,190 @@ export default function AdminBookingRequests({
 
       {/* ===== TAB ONLINE ===== */}
       {activeSubTab === "online" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 style={{ margin: 0 }}>📱 Đơn đặt sân trực tuyến</h3>
-              <p style={{ margin: "4px 0 0", color: "#888", fontSize: "0.85rem" }}>Khách đặt qua website — cần duyệt trước khi xác nhận</p>
+              <h3 className="text-xl font-semibold text-slate-900">📱 Đơn đặt sân trực tuyến</h3>
+              <p className="mt-2 text-sm text-slate-500">Khách đặt qua website — cần duyệt và quản lý ngay trong admin dashboard.</p>
             </div>
-            <button onClick={() => { if (window.confirm("Xóa tất cả đơn cũ?")) clearOldBookings && clearOldBookings(); }}
-              style={{ background: "#dc3545", color: "white", border: "none", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "0.85rem" }}>
+            <button
+              onClick={() => { if (window.confirm("Xóa tất cả đơn cũ?")) clearOldBookings && clearOldBookings(); }}
+              className="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+            >
               🗑 Dọn lịch cũ
             </button>
           </div>
 
-          {sortedRequests.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 20px", color: "#aaa" }}>
-              <div style={{ fontSize: "3rem" }}>📭</div>
-              <p>Chưa có đơn đặt sân nào.</p>
+          <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm theo tên hoặc số điện thoại..."
+              className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+            />
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "all", label: "Tất cả" },
+                { key: "pending", label: "Chờ xác nhận" },
+                { key: "approved", label: "Đã xác nhận" },
+                { key: "playing", label: "Đang chơi" },
+                { key: "completed", label: "Hoàn thành" },
+                { key: "rejected", label: "Đã hủy" },
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => setStatusFilter(option.key)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${statusFilter === option.key ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {sortedRequests.map((req) => {
-                const id = req._id || req.id;
-                const isOpen = expandedId === id;
-                const endHour = parseInt(req.hour) + (req.duration || 1);
-                const playing = isCourtPlaying(req);
-                const expired = isExpired(req);
+          </div>
 
-                let statusBadge = { text: "⏳ Chờ duyệt", bg: "#fff3cd", color: "#92600a" };
-                if (req.status === "approved" && playing) statusBadge = { text: "🟢 Đang đánh", bg: "#d6eaff", color: "#0057b7" };
-                else if (req.status === "approved" && expired) statusBadge = { text: "✅ Hoàn thành", bg: "#e0e0e0", color: "#555" };
-                else if (req.status === "approved") statusBadge = { text: "✅ Đã duyệt", bg: "#d1f5d3", color: "#1e6b21" };
-                else if (req.status === "rejected") statusBadge = { text: "❌ Từ chối", bg: "#ffd6d6", color: "#b91c1c" };
+          <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm text-slate-700">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Khách hàng</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">SĐT</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Sân</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Ngày</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Giờ bắt đầu</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Giờ kết thúc</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Trạng thái</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Thanh toán</th>
+                    <th className="whitespace-nowrap px-4 py-4 font-medium">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">
+                        Không tìm thấy đơn đặt sân phù hợp.
+                      </td>
+                    </tr>
+                  ) : (
+                    sortedRequests.map((req) => {
+                      const id = req._id || req.id;
+                      const endHour = parseInt(req.hour || 0, 10) + (req.duration || 1);
+                      const status = getStatusKey(req);
+                      const statusLabel = status === "pending" ? "Chờ xác nhận" : status === "approved" ? "Đã xác nhận" : status === "playing" ? "Đang chơi" : status === "completed" ? "Hoàn thành" : "Đã hủy";
+                      const statusClasses = status === "pending" ? "bg-amber-100 text-amber-800" : status === "approved" ? "bg-emerald-100 text-emerald-800" : status === "playing" ? "bg-sky-100 text-sky-800" : status === "completed" ? "bg-slate-100 text-slate-800" : "bg-rose-100 text-rose-800";
+                      return (
+                        <tr key={id} className="border-t border-slate-200 hover:bg-slate-50">
+                          <td className="px-4 py-4">{req.customerName || req.userId?.username || "Khách"}</td>
+                          <td className="px-4 py-4">{req.phone || req.userId?.phone || "—"}</td>
+                          <td className="px-4 py-4">{req.courtName || "—"}</td>
+                          <td className="px-4 py-4">{req.date || "—"}</td>
+                          <td className="px-4 py-4">{String(req.hour || "0").padStart(2, "0")}:00</td>
+                          <td className="px-4 py-4">{String(endHour).padStart(2, "0")}:00</td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClasses}`}>
+                              {statusLabel}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">{getPaymentLabel(req)}</td>
+                          <td className="px-4 py-4 space-x-2 whitespace-nowrap">
+                            {req.status === "pending" && (
+                              <button
+                                onClick={() => { if (window.confirm("Xác nhận đơn này?")) approveBooking(id); }}
+                                className="rounded-full bg-emerald-600 px-3 py-1 text-white transition hover:bg-emerald-700"
+                              >
+                                Xác nhận
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setExpandedId(expandedId === id ? null : id)}
+                              className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 transition hover:bg-slate-200"
+                            >
+                              Xem chi tiết
+                            </button>
+                            <button
+                              onClick={() => { if (window.confirm("Hủy lịch này?")) deleteBooking(id); }}
+                              className="rounded-full bg-rose-600 px-3 py-1 text-white transition hover:bg-rose-700"
+                            >
+                              Hủy lịch
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-                return (
-                  <div key={id} style={{ border: "1.5px solid #e8ecf4", borderRadius: "14px", overflow: "hidden", background: "white", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                    {/* Card header */}
-                    <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                        <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: "#00a651", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1.1rem", flexShrink: 0 }}>
-                          {(req.userId?.username || req.customerName || "K").charAt(0).toUpperCase()}
-                        </div>
+            <div className="space-y-4 px-4 py-4 md:hidden">
+              {sortedRequests.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-slate-500">Không tìm thấy đơn đặt sân phù hợp.</div>
+              ) : (
+                sortedRequests.map((req) => {
+                  const id = req._id || req.id;
+                  const endHour = parseInt(req.hour || 0, 10) + (req.duration || 1);
+                  const status = getStatusKey(req);
+                  const statusLabel = status === "pending" ? "Chờ xác nhận" : status === "approved" ? "Đã xác nhận" : status === "playing" ? "Đang chơi" : status === "completed" ? "Hoàn thành" : "Đã hủy";
+                  const statusClasses = status === "pending" ? "bg-amber-100 text-amber-800" : status === "approved" ? "bg-emerald-100 text-emerald-800" : status === "playing" ? "bg-sky-100 text-sky-800" : status === "completed" ? "bg-slate-100 text-slate-800" : "bg-rose-100 text-rose-800";
+                  return (
+                    <div key={id} className="space-y-3 rounded-[26px] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{req.userId?.username || req.customerName || "Khách"}</div>
-                          <div style={{ color: "#888", fontSize: "0.8rem" }}>{req.courtName} · {req.date} · {req.hour}:00–{endHour}:00</div>
+                          <div className="text-sm font-semibold text-slate-900">{req.customerName || req.userId?.username || "Khách"}</div>
+                          <div className="mt-1 text-xs text-slate-500">{req.courtName || "—"} · {req.date}</div>
                         </div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClasses}`}>{statusLabel}</span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ background: statusBadge.bg, color: statusBadge.color, padding: "4px 12px", borderRadius: "20px", fontWeight: 700, fontSize: "0.78rem" }}>
-                          {statusBadge.text}
-                        </span>
-                        <span style={{ fontWeight: 700, color: "#00a651" }}>{(req.total || 0).toLocaleString()} VNĐ</span>
-                        <button onClick={() => setExpandedId(isOpen ? null : id)}
-                          style={{ background: "#f0f4ff", border: "none", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, color: "#0057b7" }}>
-                          {isOpen ? "Thu gọn ▲" : "Chi tiết ▼"}
+                      <div className="grid gap-2 text-sm text-slate-600">
+                        <div><span className="font-semibold text-slate-900">SĐT:</span> {req.phone || req.userId?.phone || "—"}</div>
+                        <div><span className="font-semibold text-slate-900">Giờ:</span> {String(req.hour || "0").padStart(2, "0")}:00 – {String(endHour).padStart(2, "0")}:00</div>
+                        <div><span className="font-semibold text-slate-900">Thanh toán:</span> {getPaymentLabel(req)}</div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {req.status === "pending" && (
+                          <button
+                            onClick={() => { if (window.confirm("Xác nhận đơn này?")) approveBooking(id); }}
+                            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                          >
+                            Xác nhận
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setExpandedId(expandedId === id ? null : id)}
+                          className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                        >
+                          Xem chi tiết
+                        </button>
+                        <button
+                          onClick={() => { if (window.confirm("Hủy lịch này?")) deleteBooking(id); }}
+                          className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                        >
+                          Hủy lịch
                         </button>
                       </div>
-                    </div>
-
-                    {/* Expanded */}
-                    {isOpen && (
-                      <div style={{ padding: "16px 18px", borderTop: "1px solid #f0f0f0", background: "#fafbff" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
-                          <div><span style={{ color: "#888", fontSize: "0.8rem" }}>Số giờ thuê</span><br /><strong>{req.duration || 1} giờ</strong></div>
-                          <div><span style={{ color: "#888", fontSize: "0.8rem" }}>Tổng tiền</span><br /><strong>{(req.total || 0).toLocaleString()} VNĐ</strong></div>
-                          <div><span style={{ color: "#888", fontSize: "0.8rem" }}>Email</span><br /><strong>{req.userId?.email || "—"}</strong></div>
-                          <div><span style={{ color: "#888", fontSize: "0.8rem" }}>SĐT</span><br /><strong>{req.userId?.phone || "—"}</strong></div>
-                        </div>
-                        {req.paymentImage && (
-                          <div style={{ marginBottom: "14px" }}>
-                            <div style={{ color: "#888", fontSize: "0.8rem", marginBottom: "6px" }}>🧾 Ảnh chuyển khoản:</div>
-                            <img src={req.paymentImage} alt="payment"
-                              style={{ width: "160px", borderRadius: "10px", cursor: "pointer", border: "2px solid #e0e0e0" }}
-                              onClick={() => window.open(req.paymentImage)} />
+                      {expandedId === id && (
+                        <div className="rounded-3xl bg-white p-4 text-sm text-slate-600 shadow-sm">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div><span className="font-semibold text-slate-900">Email:</span> {req.userId?.email || "—"}</div>
+                            <div><span className="font-semibold text-slate-900">Số giờ:</span> {req.duration || 1}</div>
+                            <div><span className="font-semibold text-slate-900">Tổng tiền:</span> {(req.total || 0).toLocaleString()} VNĐ</div>
+                            <div><span className="font-semibold text-slate-900">Hình thức:</span> {getPaymentLabel(req)}</div>
                           </div>
-                        )}
-                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                          {req.status === "pending" && (
-                            <>
-                              <button onClick={() => { if (window.confirm("Duyệt đơn này?")) approveBooking(id); }}
-                                style={{ background: "#00a651", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontWeight: 700 }}>
-                                ✅ Duyệt
-                              </button>
-                              <button onClick={() => setShowRejectModal(req)}
-                                style={{ background: "#dc3545", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontWeight: 700 }}>
-                                ❌ Từ chối
-                              </button>
-                            </>
+                          {req.paymentImage && (
+                            <div className="mt-4">
+                              <div className="mb-2 text-xs uppercase tracking-[0.15em] text-slate-500">Ảnh thanh toán</div>
+                              <img src={req.paymentImage} alt="payment proof" className="h-28 w-full rounded-2xl object-cover" onClick={() => window.open(req.paymentImage)} />
+                            </div>
                           )}
-                          <button onClick={() => { if (window.confirm("Xóa đơn này?")) deleteBooking(id); }}
-                            style={{ background: "#6c757d", color: "white", border: "none", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "0.85rem" }}>
-                            🗑 Xóa
-                          </button>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
