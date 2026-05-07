@@ -36,10 +36,10 @@ const formatCourtData = (items) => {
     .map(c => ({
       id: c._id || c.id,
       name: typeof c.name === 'string' ? c.name : 'Unknown Court',
-      price: c.price,
-      desc: c.description || c.desc,
-      status: c.status,
-      image: c.image
+      price: typeof c.price === 'number' ? c.price : Number(c.price) || 0,
+      desc: typeof c.description === 'string' ? c.description : (typeof c.desc === 'string' ? c.desc : ''),
+      status: typeof c.status === 'string' ? c.status : 'Trống',
+      image: typeof c.image === 'string' ? c.image : ''
     }))
     .filter((court) => {
       const key = court.id || court.name;

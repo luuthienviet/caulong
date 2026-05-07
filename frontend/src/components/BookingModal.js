@@ -132,10 +132,10 @@ export default function BookingModal({
           ✕
         </button>
 
-        <img src={selectedCourt.image} alt={selectedCourt.name} className="booking-image" />
-        <h2>{selectedCourt.name}</h2>
+        <img src={selectedCourt.image} alt={typeof selectedCourt.name === 'string' ? selectedCourt.name : 'Unknown Court'} className="booking-image" />
+        <h2>{typeof selectedCourt.name === 'string' ? selectedCourt.name : 'Unknown Court'}</h2>
         <div className="court-description">
-          <p>{selectedCourt.desc || selectedCourt.description}</p>
+          <p>{typeof selectedCourt.desc === 'string' ? selectedCourt.desc : (typeof selectedCourt.description === 'string' ? selectedCourt.description : '')}</p>
         </div>
         <p>
           💰 Giá ngày (05–17h): {selectedCourt.price.toLocaleString()} VNĐ/giờ

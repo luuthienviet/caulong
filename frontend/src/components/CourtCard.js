@@ -9,7 +9,8 @@ export default function CourtCard({
   userRole,
   onRate,
 }) {
-
+  const courtName = typeof court.name === 'string' ? court.name : 'Unknown Court';
+  const courtDesc = typeof court.description === 'string' ? court.description : (typeof court.desc === 'string' ? court.desc : '');
   const avgRating = court.avgRating || 0;
   const reviewCount = court.reviewCount || 0;
   const isMaintenance = court.status === 'Đang bảo trì';
@@ -42,10 +43,10 @@ export default function CourtCard({
           <div className="maintenance-badge">🔧 Đang bảo trì</div>
         )}
 
-        <img src={court.image} alt={court.name} className="court-img" />
+        <img src={court.image} alt={courtName} className="court-img" />
         <div className="court-content">
-          <div className="court-title">{court.name}</div>
-          <p className="court-desc">{court.description || court.desc}</p>
+          <div className="court-title">{courtName}</div>
+          <p className="court-desc">{courtDesc}</p>
           <div className="court-opening">🕒 Mở cửa: 05:00 - 22:00</div>
           <button
             className={`btn-view-court ${userRole !== 'admin' && isMaintenance ? 'disabled' : ''}`}

@@ -138,8 +138,10 @@ export default function CourtDetail({
     past:      { label: '—',         bg: '#f9fafb', color: '#d1d5db', border: '#e5e7eb', cursor: false, icon: '' },
   };
 
+  const courtName = typeof selectedCourt.name === 'string' ? selectedCourt.name : 'Unknown Court';
+  const courtDesc = typeof selectedCourt.desc === 'string' ? selectedCourt.desc : (typeof selectedCourt.description === 'string' ? selectedCourt.description : '');
   const galleryImages = [selectedCourt.image, selectedCourt.image, selectedCourt.image];
-  const isVip = selectedCourt.name.toLowerCase().includes('vip');
+  const isVip = courtName.toLowerCase().includes('vip');
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 16px 64px', fontFamily: 'inherit' }}>
@@ -156,7 +158,7 @@ export default function CourtDetail({
 
       {/* Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <h1 style={{ margin: 0, fontSize: '1.7rem', fontWeight: 800, color: '#0f172a' }}>{selectedCourt.name}</h1>
+        <h1 style={{ margin: 0, fontSize: '1.7rem', fontWeight: 800, color: '#0f172a' }}>{courtName}</h1>
         {isVip && (
           <span style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff',
             padding: '3px 14px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>
@@ -165,7 +167,7 @@ export default function CourtDetail({
         )}
       </div>
       <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem' }}>
-        {selectedCourt.desc || selectedCourt.description}
+        {courtDesc}
       </p>
 
       {/* 2-col layout */}
