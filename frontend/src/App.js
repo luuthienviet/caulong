@@ -743,25 +743,26 @@ function App() {
 
   return (
     <div className="container">
-      <header className="header">
-        <div className="logo" onClick={handleLogoClick}>
-          KONTUM <span>BADMINTON</span>
-        </div>
-        <nav className="main-nav">
-          <ul>
-            {headerItems.filter(item => item.visible).map(item => (
-              <li
-                key={item.page}
-                onClick={() => setPage(item.page)}
-                className={page === item.page ? `active ${item.className || ''}`.trim() : ''}
-              >
-                {item.label}
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="header-auth-section">
-          <div className="notification-wrapper">
+      {page !== 'admin' && (
+        <header className="header">
+          <div className="logo" onClick={handleLogoClick}>
+            KONTUM <span>BADMINTON</span>
+          </div>
+          <nav className="main-nav">
+            <ul>
+              {headerItems.filter(item => item.visible).map(item => (
+                <li
+                  key={item.page}
+                  onClick={() => setPage(item.page)}
+                  className={page === item.page ? `active ${item.className || ''}`.trim() : ''}
+                >
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="header-auth-section">
+            <div className="notification-wrapper">
             <div className="notification-icon" onClick={() => {
               if (!isAuthenticated) {
                 setPage('auth');
@@ -883,6 +884,7 @@ function App() {
           )}
         </div>
       </header>
+      )}
 
       <main className="main-content fade-in">
         {page === 'home' && (

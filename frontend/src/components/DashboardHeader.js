@@ -17,20 +17,20 @@ export default function DashboardHeader({ user, onLogout }) {
               </div>
               <div className="hidden md:block">
                 <h1 className="text-xl font-bold text-gray-900">Kontum Badminton</h1>
-                <p className="text-xs text-gray-500">Management System</p>
+                <p className="text-xs text-gray-500">Hệ thống quản lý</p>
               </div>
             </div>
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
               <a href="#overview" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">
-                Dashboard
+                Tổng quan
               </a>
               <a href="#analytics" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">
-                Analytics
+                Phân tích
               </a>
               <a href="#courts" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">
-                Courts
+                Sân 
               </a>
             </nav>
 
@@ -41,7 +41,7 @@ export default function DashboardHeader({ user, onLogout }) {
                 <Bell size={20} />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition">
-                  <p className="text-sm text-gray-600">No new notifications</p>
+                  <p className="text-sm text-gray-600">Không có thông báo mới</p>
                 </div>
               </button>
 
@@ -83,13 +83,13 @@ export default function DashboardHeader({ user, onLogout }) {
           {mobileMenuOpen && (
             <nav className="md:hidden mt-4 pt-4 border-t border-gray-200 flex flex-col gap-3">
               <a href="#overview" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition py-2">
-                Dashboard
+                Tổng quan
               </a>
               <a href="#analytics" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition py-2">
-                Analytics
+                Phân tích
               </a>
               <a href="#courts" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition py-2">
-                Courts
+                Sân
               </a>
             </nav>
           )}

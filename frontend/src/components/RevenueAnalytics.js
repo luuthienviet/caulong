@@ -30,16 +30,16 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
   const growthLabel = revenueCurrent >= revenuePrevious ? `+${growthPct}%` : `${growthPct}%`;
 
   const peakData = [
-    { name: 'Peak Hours (17-21)', value: peakRevenue, fill: '#3b82f6' },
-    { name: 'Off-Peak Hours', value: offPeakRevenue, fill: '#9ca3af' }
+    { name: 'Giờ cao điểm (17-21)', value: peakRevenue, fill: '#3b82f6' },
+    { name: 'Giờ thấp điểm', value: offPeakRevenue, fill: '#9ca3af' }
   ];
 
   return (
     <section id="analytics" className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Revenue Analytics</h2>
-          <p className="text-sm text-gray-600 mt-1">Performance and revenue insights</p>
+          <h2 className="text-2xl font-bold text-gray-900">Phân tích doanh thu</h2>
+          <p className="text-sm text-gray-600 mt-1">Hiệu suất và thống kê doanh thu</p>
         </div>
 
         {/* Period Filter */}
@@ -54,7 +54,7 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {period === 'today' ? 'Today' : period === 'week' ? 'This Week' : 'This Month'}
+              {period === 'today' ? 'Hôm nay' : period === 'week' ? 'Tuần này' : 'Tháng này'}
             </button>
           ))}
         </div>
@@ -69,12 +69,12 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
               <TrendingUp size={20} className="text-white" />
             </div>
             <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-              Current Period
+              Kỳ hiện tại
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-2">Total Revenue</p>
+          <p className="text-sm text-gray-600 mb-2">Tổng doanh thu</p>
           <p className="text-3xl font-bold text-gray-900">{revenueCurrent.toLocaleString()}đ</p>
-          <p className="text-xs text-gray-500 mt-2">vs. previous period</p>
+          <p className="text-xs text-gray-500 mt-2">So với kỳ trước</p>
         </div>
 
         {/* Growth */}
@@ -91,11 +91,11 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
               {growthLabel}
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-2">Growth Rate</p>
+          <p className="text-sm text-gray-600 mb-2">Tỷ lệ tăng trưởng</p>
           <p className="text-3xl font-bold" style={{ color: growthColor }}>
             {growthLabel}
           </p>
-          <p className="text-xs text-gray-500 mt-2">compared to previous period</p>
+          <p className="text-xs text-gray-500 mt-2">so với kỳ trước</p>
         </div>
 
         {/* Peak Revenue */}
@@ -105,10 +105,10 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
               <TrendingUp size={20} className="text-white" />
             </div>
             <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
-              Peak Hours
+              Giờ cao điểm
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-2">Peak Hours Revenue</p>
+          <p className="text-sm text-gray-600 mb-2">Doanh thu giờ cao điểm</p>
           <p className="text-3xl font-bold text-gray-900">{peakRevenue.toLocaleString()}đ</p>
           <p className="text-xs text-gray-500 mt-2">17:00 - 21:00</p>
         </div>
@@ -118,7 +118,7 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Area Chart - Revenue Trend */}
         <div className="lg:col-span-2 rounded-2xl backdrop-blur-xl bg-white/80 border border-white/60 p-6 hover:shadow-lg transition-all">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Trend</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Xu hướng doanh thu</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData}>
               <defs>
@@ -152,7 +152,7 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
 
         {/* Pie Chart - Peak vs Off-Peak */}
         <div className="rounded-2xl backdrop-blur-xl bg-white/80 border border-white/60 p-6 hover:shadow-lg transition-all">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Peak Hours Distribution</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Phân bố giờ cao điểm</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie

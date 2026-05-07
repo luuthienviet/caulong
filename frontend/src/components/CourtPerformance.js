@@ -5,8 +5,8 @@ const CourtPerformance = ({ courtRevenueData, maxCourtRevenue, currentPeriodBook
   return (
     <section id="courts" className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Court Performance</h2>
-        <p className="text-sm text-gray-600 mt-1">Revenue and booking metrics by court</p>
+        <h2 className="text-2xl font-bold text-gray-900">Hiệu suất sân</h2>
+        <p className="text-sm text-gray-600 mt-1">Thống kê doanh thu và đặt sân theo từng sân</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -17,8 +17,8 @@ const CourtPerformance = ({ courtRevenueData, maxCourtRevenue, currentPeriodBook
               <Target size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Revenue by Court</h3>
-              <p className="text-xs text-gray-500">Performance metrics</p>
+              <h3 className="text-lg font-semibold text-gray-900">Doanh thu theo sân</h3>
+              <p className="text-xs text-gray-500">Chỉ số hiệu suất</p>
             </div>
           </div>
 
@@ -33,7 +33,7 @@ const CourtPerformance = ({ courtRevenueData, maxCourtRevenue, currentPeriodBook
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{typeof item.court.name === 'string' ? item.court.name : 'Unknown Court'}</p>
                       <p className="text-xs text-gray-500">
-                        {currentPeriodBookings.filter(b => String(b.courtId) === String(item.court.id || item.court._id)).length} bookings
+                        {currentPeriodBookings.filter(b => String(b.courtId) === String(item.court.id || item.court._id)).length} Luot đặt sân
                       </p>
                     </div>
                   </div>
@@ -61,8 +61,8 @@ const CourtPerformance = ({ courtRevenueData, maxCourtRevenue, currentPeriodBook
               <Award size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Top Performers</h3>
-              <p className="text-xs text-gray-500">Highest revenue courts</p>
+              <h3 className="text-lg font-semibold text-gray-900">Sân nổi bật</h3>
+              <p className="text-xs text-gray-500">Sân có doanh thu cao nhất</p>
             </div>
           </div>
 
@@ -93,8 +93,8 @@ const CourtPerformance = ({ courtRevenueData, maxCourtRevenue, currentPeriodBook
                   </div>
 
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{typeof item.court.name === 'string' ? item.court.name : 'Unknown Court'}</p>
-                    <p className="text-xs text-gray-500">Revenue performance</p>
+                    <p className="font-semibold text-gray-900">{typeof item.court.name === 'string' ? item.court.name : 'Sân chưa xác định'}</p>
+                    <p className="text-xs text-gray-500">Hiệu suất doanh thu</p>
                   </div>
 
                   <div className="text-right">

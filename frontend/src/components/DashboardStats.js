@@ -59,8 +59,8 @@ export default function DashboardStats({ activeCourts, totalBookingsToday, reven
   return (
     <section id="overview" className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
-        <p className="text-sm text-gray-600 mt-1">Real-time metrics and performance indicators</p>
+        <h2 className="text-2xl font-bold text-gray-900">Tổng quan</h2>
+        <p className="text-sm text-gray-600 mt-1">Các chỉ số thời gian thực và chỉ báo hiệu suất</p>
       </div>
 
       <style>{`
@@ -79,17 +79,17 @@ export default function DashboardStats({ activeCourts, totalBookingsToday, reven
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={Activity}
-          label="Courts Active"
+          label="Sân đang hoạt động"
           value={activeCourts}
-          subtext="Currently in use"
+          subtext="Đang sử dụng"
           gradient="from-blue-600 to-cyan-600"
           delay={0}
         />
         <StatCard
           icon={Calendar}
-          label="Bookings Today"
+          label="Đặt sân hôm nay"
           value={totalBookingsToday}
-          subtext="Total reservations"
+          subtext="Tổng đặt chỗ"
           gradient="from-purple-600 to-pink-600"
           delay={1}
         />
@@ -97,15 +97,15 @@ export default function DashboardStats({ activeCourts, totalBookingsToday, reven
           icon={DollarSign}
           label="Revenue Today"
           value={`${revenueToday.toLocaleString()}đ`}
-          subtext="Total earnings"
+          subtext="Tổng thu nhập"
           gradient="from-emerald-600 to-teal-600"
           delay={2}
         />
         <StatCard
           icon={BarChart3}
-          label="Total Bookings"
+          label="Tổng đặt sân"
           value={totalBookingsAll}
-          subtext="All time"
+          subtext="Tất cả thời gian"
           gradient="from-orange-600 to-red-600"
           delay={3}
         />
