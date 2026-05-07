@@ -460,9 +460,9 @@ function App() {
 
   const approveBooking = async (id) => {
     try {
-      await API.put(`/bookings/${id}/status`, { status: 'approved' });
+      const res = await API.put(`/bookings/${id}/status`, { status: 'approved' });
       await fetchAllBookings();
-      const booking = bookingRequests.find(b => b._id === id || b.id === id);
+      const booking = res.data?.data || bookingRequests.find(b => b._id === id || b.id === id);
       if (booking) {
         const customerName = booking.userId?.username || booking.customerName || 'Khách hàng';
         addNotification(`✅ Đã duyệt đơn đặt sân của ${customerName} - Sân ${booking.courtName} ngày ${booking.date} lúc ${booking.hour}:00`);

@@ -1,5 +1,6 @@
 import Booking from "../models/Booking.js";
 import User from "../models/User.js";
+import bcrypt from "bcryptjs";
 import { sendEmail } from "../utils/emailService.js";
 import Notification from '../models/Notification.js';
 
@@ -142,10 +143,33 @@ export const adminCreateBooking = async (req, res, next) => {
     }
     // Tự động tìm user theo username/phone/name
     let userId = req.user.id;
-    const matchedUser = await User.findOne({
-      $or: [{ username: customerName }, { phone: customerName }, { name: customerName }]
-    });
-    if (matchedUser) userId = matchedUser._id;
+    let matchedUser = null;
+    if (customerPhone) {
+      matchedUser = await User.findOne({ phone: customerPhone });
+    }
+    if (!matchedUser && customerName) {
+      matchedUser = await User.findOne({
+        $or: [{ username: customerName }, { name: customerName }]
+      });
+    }
+    if (matchedUser) {
+      userId = matchedUser._id;
+    } else if (customerName) {
+      const guestUsername = `guest_${Date.now()}`;
+      const randomPassword = Math.random().toString(36).slice(-8);
+      const hash = await bcrypt.hash(randomPassword, 10);
+      const userData = {
+        username: guestUsername,
+        name: customerName,
+        password: hash,
+        role: 'user',
+        email: '',
+        phone: customerPhone || ''
+      };
+      const newUser = new User(userData);
+      await newUser.save();
+      userId = newUser._id;
+    }
 
     const booking = await Booking.create({
       courtId,
