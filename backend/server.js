@@ -11,6 +11,9 @@ import notificationRoutes from './src/routes/notificationRoutes.js';
 
 dotenv.config();
 
+// DEBUG MONGO URI
+console.log("MONGO_URI =", process.env.MONGO_URI);
+
 const app = express();
 
 // ========== CẤU HÌNH CORS ==========
