@@ -35,7 +35,7 @@ const formatCourtData = (items) => {
     .filter(c => c && typeof c === 'object')
     .map(c => ({
       id: c._id || c.id,
-      name: c.name,
+      name: typeof c.name === 'string' ? c.name : 'Unknown Court',
       price: c.price,
       desc: c.description || c.desc,
       status: c.status,

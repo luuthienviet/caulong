@@ -31,7 +31,7 @@ const CourtPerformance = ({ courtRevenueData, maxCourtRevenue, currentPeriodBook
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{item.court.name}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{typeof item.court.name === 'string' ? item.court.name : 'Unknown Court'}</p>
                       <p className="text-xs text-gray-500">
                         {currentPeriodBookings.filter(b => String(b.courtId) === String(item.court.id || item.court._id)).length} bookings
                       </p>
@@ -93,7 +93,7 @@ const CourtPerformance = ({ courtRevenueData, maxCourtRevenue, currentPeriodBook
                   </div>
 
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{item.court.name}</p>
+                    <p className="font-semibold text-gray-900">{typeof item.court.name === 'string' ? item.court.name : 'Unknown Court'}</p>
                     <p className="text-xs text-gray-500">Revenue performance</p>
                   </div>
 
