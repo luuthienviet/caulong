@@ -1,11 +1,10 @@
 import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema({
-  courtId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Court",
-    required: true
-  },
+courtId: {
+  type: String,  
+  required: true
+},
   courtName: {
     type: String,
     required: true
