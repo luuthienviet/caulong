@@ -57,4 +57,8 @@ app.get("/", (req, res) => res.send("API chạy OK"));
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server chạy tại port ${PORT}`));
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`🚀 Server chạy tại port ${PORT}`));
+}
+
+export default app;
