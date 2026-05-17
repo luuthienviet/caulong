@@ -24,7 +24,7 @@ export const login = async (req, res, next) => {
     if (user.isLocked) return res.status(403).json({ message: "Tài khoản này đã bị khóa" });
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Sai mật khẩu" });
-    const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET || '123456', { expiresIn: "7d" });
     res.json({ token, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '', isLocked: user.isLocked } });
   } catch (error) { next(error); }
 };

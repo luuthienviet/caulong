@@ -6,7 +6,7 @@ dotenv.config();
 const mongoUri =
   process.env.MONGO_URI ||
   process.env.MONGO_FALLBACK_URI ||
-  "mongodb://127.0.0.1:27017/WebQuanLySanCauLong";
+  "mongodb+srv://caulong:Abc%401234@cluster0.dezz4ov.mongodb.net/?retryWrites=true&w=majority";
 
 const connectDB = async () => {
   try {
