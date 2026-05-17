@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  const envUrl = process.env.REACT_APP_API_URL;
+  if (envUrl && !envUrl.includes('localhost')) {
+    return envUrl;
+  }
+  return window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+};
+
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api'),
+  baseURL: getBaseURL(),
 });
 
 API.interceptors.request.use((req) => {
