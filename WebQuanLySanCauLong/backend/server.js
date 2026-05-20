@@ -9,6 +9,7 @@ import { errorHandler } from "./src/middleware/errorHandler.js";
 import reviewRoutes from './src/routes/reviewRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 import contactRoutes from './src/routes/contactRoutes.js';
+import chatbotRoutes from './src/routes/chatbotRoutes.js';
 
 dotenv.config();
 import bcrypt from 'bcryptjs';
@@ -47,6 +48,7 @@ app.use("/api/courts", courtRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contacts', contactRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 app.get("/", (req, res) => res.send("API chạy OK"));
 
