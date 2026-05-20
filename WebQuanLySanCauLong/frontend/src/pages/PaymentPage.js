@@ -110,7 +110,7 @@ export default function PaymentPage({ bookingData, setPage, refreshBookings }) {
             </div>
             <div className="bank-info-item">
               <span className="bank-label">Chủ tài khoản</span>
-              <span className="bank-value">A CHEH VINH</span>
+              <span className="bank-value">LUU THIEN VIET</span>
             </div>
             <div className="bank-info-item">
               <span className="bank-label">Nội dung chuyển khoản</span>
@@ -122,7 +122,7 @@ export default function PaymentPage({ bookingData, setPage, refreshBookings }) {
         {/* Action Button */}
         <div className="payment-actions">
           <button onClick={handlePaymentSubmit} disabled={loading} className="btn-confirm-payment">
-            {loading ? '⏳ Đang ghi nhận...' : '✅ Tôi đã chuyển khoản thanh toán'}
+            {loading ? '⏳ Đang ghi nhận...' : '✅ Thanh Toán'}
           </button>
           <button className="btn-cancel-payment" onClick={() => setPage('my-bookings')}>
             Quay lại lịch đặt sân
