@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, Fragment } from 'react';
 import API from '../../api';
 
 const statusLabels = {
@@ -175,45 +175,101 @@ export default function AdminPaymentManagement({ bookingRequests = [], refreshBo
                 </tr>
               ) : (
                 filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="border-t border-slate-200 hover:bg-white">
-                    <td className="px-4 py-4 font-mono text-slate-700">{tx.id}</td>
-                    <td className="px-4 py-4 text-slate-900">{tx.customer}</td>
-                    <td className="px-4 py-4 font-semibold text-slate-900">{formatCurrency(tx.amount)}</td>
-                    <td className="px-4 py-4 text-slate-600">{formatDateTime(tx.time)}</td>
-                    <td className="px-4 py-4 text-slate-600">{tx.method}</td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusLabels[tx.status].badge}`}>
-                        {statusLabels[tx.status].label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        {tx.booking.paymentStatus === 'deposit_sent' && (
+                  <Fragment key={tx.id}>
+                    <tr className="border-t border-slate-200 hover:bg-white">
+                      <td className="px-4 py-4 font-mono text-slate-700">{tx.id}</td>
+                      <td className="px-4 py-4 text-slate-900">{tx.customer}</td>
+                      <td className="px-4 py-4 font-semibold text-slate-900">{formatCurrency(tx.amount)}</td>
+                      <td className="px-4 py-4 text-slate-600">{formatDateTime(tx.time)}</td>
+                      <td className="px-4 py-4 text-slate-600">{tx.method}</td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusLabels[tx.status].badge}`}>
+                          {statusLabels[tx.status].label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          {tx.booking.paymentStatus === 'deposit_sent' && (
+                            <button
+                              type="button"
+                              onClick={() => handleApprovePayment(tx.id)}
+                              className="rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                            >
+                              Duyệt thanh toán
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => handleApprovePayment(tx.id)}
-                            className="rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                            onClick={() => setSelectedPaymentId(tx.id === selectedPaymentId ? null : tx.id)}
+                            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
                           >
-                            Duyệt thanh toán
+                            {selectedPaymentId === tx.id ? 'Ẩn' : 'Chi tiết'}
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPaymentId(tx.id === selectedPaymentId ? null : tx.id)}
-                          className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                        >
-                          {selectedPaymentId === tx.id ? 'Ẩn' : 'Chi tiết'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => printInvoice(tx.booking)}
-                          className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                        >
-                          Xuất PDF
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          <button
+                            type="button"
+                            onClick={() => printInvoice(tx.booking)}
+                            className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                          >
+                            Xuất PDF
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {selectedPaymentId === tx.id && (
+                      <tr className="bg-slate-50">
+                        <td colSpan="7" className="px-4 py-4 border-t border-slate-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-[24px] bg-white p-6 shadow-inner border border-slate-200/60">
+                            <div>
+                              <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-[0.1em]">📋 Chi tiết đặt sân</h4>
+                              <div className="mt-3 space-y-2.5 text-sm text-slate-600">
+                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                                  <span className="text-slate-400">Sân cầu lông:</span>
+                                  <span className="font-semibold text-slate-900">{tx.booking.courtName || 'Không xác định'}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                                  <span className="text-slate-400">Ngày chơi:</span>
+                                  <span className="font-semibold text-slate-900">{tx.booking.date || 'Không rõ'}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                                  <span className="text-slate-400">Khung giờ:</span>
+                                  <span className="font-semibold text-slate-900">{tx.booking.hour ? `${tx.booking.hour}:00` : 'Không rõ'} ({tx.booking.duration || 1} giờ)</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-400">Ghi chú:</span>
+                                  <span className="font-medium text-slate-700 italic">{tx.booking.customerNote || 'Không có ghi chú'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-[0.1em]">💳 Chi tiết giao dịch</h4>
+                              <div className="mt-3 space-y-2.5 text-sm text-slate-600">
+                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                                  <span className="text-slate-400">Mã đơn đặt:</span>
+                                  <span className="font-mono text-xs font-semibold text-slate-900">{tx.id}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                                  <span className="text-slate-400">Khách hàng:</span>
+                                  <span className="font-semibold text-slate-900">{tx.customer}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                                  <span className="text-slate-400">Số điện thoại:</span>
+                                  <span className="font-semibold text-slate-900">{tx.booking.userId?.phone || tx.booking.customerPhone || 'Chưa có'}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                                  <span className="text-slate-400">Tổng thanh toán:</span>
+                                  <span className="font-bold text-emerald-600">{formatCurrency(tx.amount)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-400">Phương thức:</span>
+                                  <span className="font-semibold text-slate-900">{tx.method}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))
               )}
             </tbody>
