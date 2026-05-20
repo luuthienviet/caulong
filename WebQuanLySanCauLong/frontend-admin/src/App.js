@@ -261,7 +261,7 @@ function App() {
       <header className="admin-header-bar">
         <div className="admin-header-left">
           <h1 className="admin-brand" onClick={() => setPage('reports')}>
-            👑 KONTUM <span>ADMIN</span>
+            👑 <span className="logo-brand">LTV</span> <span>ADMIN</span>
           </h1>
         </div>
         <nav className="admin-nav">

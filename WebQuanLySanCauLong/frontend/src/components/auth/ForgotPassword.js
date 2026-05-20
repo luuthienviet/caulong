@@ -23,7 +23,7 @@ export default function ForgotPassword({ setPage }) {
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-info-side" style={{ backgroundImage: "linear-gradient(135deg, rgba(9, 13, 22, 0.65), rgba(30, 27, 75, 0.85)), url('/smash.jpg')" }}>
-            <div className="auth-logo">KONTUM <span>BADMINTON</span></div>
+            <div className="auth-logo"><span className="logo-brand">LTV</span> <span>BADMINTON</span></div>
             <h3>QUÊN MẬT KHẨU</h3>
             <p>Nhập email đăng ký để nhận link đặt lại mật khẩu.</p>
             <button className="btn-back-home" onClick={() => setPage('auth')}>QUAY LẠI</button>

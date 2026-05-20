@@ -5,7 +5,9 @@ const getBaseURL = () => {
   if (envUrl && !envUrl.includes('localhost')) {
     return envUrl;
   }
-  return window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://caulong-kappa.vercel.app/api';
+  return window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api'
+    : `${window.location.protocol}//${window.location.host}/api`;
 };
 
 const API = axios.create({

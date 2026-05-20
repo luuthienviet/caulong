@@ -29,7 +29,7 @@ function StarPicker({ value, onChange }) {
 }
 
 /* ── Review + Suggestions section ── */
-function ReviewSection({ court, courts = [], onSelectCourt, user }) {
+function ReviewSection({ court, courts = [], onSelectCourt, user, onRefreshCourts }) {
   const otherCourts = courts.filter(
     c => String(c._id || c.id) !== String(court._id || court.id) &&
       c.status !== 'Đang bảo trì'
@@ -97,6 +97,7 @@ function ReviewSection({ court, courts = [], onSelectCourt, user }) {
 
       setNewStars(0); setNewText(''); setNewName('');
       setSubmitted(true);
+      if (onRefreshCourts) onRefreshCourts();
       setTimeout(() => setSubmitted(false), 3000);
     } catch (err) {
       alert(err.response?.data?.message || 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng đăng nhập!');
@@ -430,6 +431,7 @@ export default function CourtDetail({
   setSelectedCourt,
   user,
   courts = [],        // ← danh sách tất cả sân thật từ parent
+  onRefreshCourts,
 }) {
   const [slideIndex, setSlideIndex] = useState(0);
   const [step, setStep] = useState(0);
@@ -505,6 +507,56 @@ export default function CourtDetail({
   const canExtend = () => {
     const next = hours.indexOf(selectedHour) + duration;
     return next < hours.length && !isDisabled(hours[next]);
+  };
+
+  const handleHourClick = (index, hour) => {
+    // 0. Nếu chưa chọn giờ nào
+    if (!selectedHour) {
+      setSelectedHour(hour);
+      setDuration(1);
+      return;
+    }
+
+    const start = hours.indexOf(selectedHour);
+    const end = start + duration - 1;
+
+    // 1. Nhấn vào một ô ĐÃ CHỌN
+    if (index >= start && index <= end) {
+      if (start === end) {
+        // Chỉ chọn đúng 1 ô đó, nhấn lại thì hủy chọn hoàn toàn
+        setSelectedHour('');
+        setDuration(1);
+      } else if (index === start) {
+        // Nhấn vào ô đầu tiên: bỏ chọn ô đầu tiên, co lại thành [start + 1, end]
+        setSelectedHour(hours[start + 1]);
+        setDuration(duration - 1);
+      } else if (index === end) {
+        // Nhấn vào ô cuối cùng: bỏ chọn ô cuối cùng, co lại thành [start, end - 1]
+        setDuration(duration - 1);
+      } else {
+        // Nhấn vào ô ở GIỮA: reset và chọn mỗi ô này để tránh khoảng cách (gaps)
+        setSelectedHour(hour);
+        setDuration(1);
+      }
+      return;
+    }
+
+    // 2. Nhấn vào một ô CHƯA CHỌN
+    if (index === start - 1) {
+      // Nhấn vào ô ngay trước start: mở rộng sang trái
+      if (isDisabled(hours[index])) return;
+      setSelectedHour(hours[index]);
+      setDuration(duration + 1);
+    } else if (index === end + 1) {
+      // Nhấn vào ô ngay sau end: mở rộng sang phải
+      if (isDisabled(hours[index])) return;
+      setDuration(duration + 1);
+    } else {
+      // Nhấn vào ô ở xa (không liên tục): reset và chọn ô này làm ô duy nhất
+      if (isDisabled(hours[index])) return;
+      setSelectedHour(hour);
+      setDuration(1);
+    }
   };
   const priceForHour = h => Number(h) >= 17 ? Math.floor(selectedCourt.price * 1.3) : selectedCourt.price;
   const totalPrice = (() => {
@@ -677,10 +729,9 @@ export default function CourtDetail({
                 {/* Chọn giờ */}
                 {selectedDate && (
                   <div style={{ marginBottom: 20 }}>
-                    <label style={labelStyle}>Chọn giờ <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.78rem' }}>(kéo để chọn nhiều giờ)</span></label>
+                    <label style={labelStyle}>Chọn giờ <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.78rem' }}>(nhấp để chọn nhiều giờ liên tiếp)</span></label>
                     {/* Đã loại bỏ phần chú giải biểu tượng theo yêu cầu */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(72px,1fr))', gap: 6 }}
-                      onMouseLeave={() => dragging && setDragging(false)}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(72px,1fr))', gap: 6 }}>
                       {hours.map((hour, index) => {
                         const status = getSlotStatus(hour);
                         const meta = slotMeta[status];
@@ -688,17 +739,7 @@ export default function CourtDetail({
                         const isEve = Number(hour) >= 17;
                         return (
                           <button key={hour} type="button" disabled={!meta.ok}
-                            onMouseDown={() => {
-                              if (!meta.ok) return;
-                              setDragging(true); setSelectionAnchor(index);
-                              setSelectionRange({ start: index, end: index });
-                              setSelectedHour(hour); setDuration(1);
-                            }}
-                            onMouseEnter={() => {
-                              if (!dragging || selectionAnchor == null) return;
-                              const r = getDragRange(selectionAnchor, index);
-                              if (r) { setSelectionRange(r); setSelectedHour(hours[r.start]); setDuration(r.end - r.start + 1); }
-                            }}
+                            onClick={() => handleHourClick(index, hour)}
                             style={{
                               border: `2px solid ${inSel ? '#4361ee' : meta.border}`,
                               borderRadius: 10, padding: '8px 4px',
@@ -819,6 +860,7 @@ export default function CourtDetail({
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           user={user}
+          onRefreshCourts={onRefreshCourts}
         />
       </div>
     );
@@ -954,6 +996,7 @@ export default function CourtDetail({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               user={user}
+              onRefreshCourts={onRefreshCourts}
             />
           </div>
         </div>
@@ -964,7 +1007,7 @@ export default function CourtDetail({
         <div style={{ padding: '0 12px' }}>
           <div style={mCard}>
             <div style={{ padding: '16px 20px 8px' }}>
-              <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a', marginBottom: 8 }}>🕐 Chọn giờ bắt đầu</div>
+              <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a', marginBottom: 8 }}>🕐 Chọn giờ chơi <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.78rem' }}>(chạm để chọn nhiều giờ liên tiếp)</span></div>
               {/* Đã loại bỏ phần chú giải biểu tượng theo yêu cầu */}
             </div>
             <div style={{ padding: '8px 14px 18px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
@@ -975,7 +1018,7 @@ export default function CourtDetail({
                 const isEve = Number(hour) >= 17;
                 return (
                   <button key={hour} type="button" disabled={!meta.ok}
-                    onClick={() => { if (!meta.ok) return; setSelectedHour(hour); setDuration(1); setSelectionRange({ start: index, end: index }); }}
+                    onClick={() => handleHourClick(index, hour)}
                     style={{
                       border: `2px solid ${inSel ? '#4361ee' : meta.border}`,
                       borderRadius: 12, padding: '10px 4px',

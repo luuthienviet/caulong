@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { sendEmail } from "../utils/emailService.js";
 import Notification from '../models/Notification.js';
+import Court from "../models/Court.js";
 
 const parseBookingStart = (booking) => {
   const rawDate = String(booking.date || '');
@@ -337,4 +338,226 @@ export const customerPayBooking = async (req, res, next) => {
     
     res.status(200).json({ success: true, message: "Gửi yêu cầu thanh toán thành công!", data: booking });
   } catch (error) { next(error); }
+};
+
+export const getAIRecommendations = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Lấy tất cả sân từ database
+    const courts = await Court.find();
+    const activeCourts = courts.filter(c => c.status !== 'Đang bảo trì');
+
+    if (activeCourts.length === 0) {
+      return res.status(200).json({
+        success: true,
+        type: 'none',
+        message: 'Hiện tại tất cả các sân đều đang bảo trì.',
+        court: null,
+        date: '',
+        hour: ''
+      });
+    }
+
+    // 2. Lấy tất cả bookings đã duyệt để check trùng lịch
+    const allSchedules = await Booking.find({ status: { $in: ['approved', 'pending'] } });
+
+    // Khởi tạo ngày hôm nay và ngày mai định dạng YYYY-MM-DD (múi giờ Việt Nam GMT+7)
+    const tzOffset = 7 * 60 * 60 * 1000;
+    const localNow = new Date(Date.now() + tzOffset);
+    const todayStr = localNow.toISOString().split('T')[0];
+
+    const localTomorrow = new Date(Date.now() + tzOffset + 24 * 60 * 60 * 1000);
+    const tomorrowStr = localTomorrow.toISOString().split('T')[0];
+
+    const currentHour = localNow.getUTCHours(); // Giờ hiện tại sau khi đã cộng offset
+
+    // Hàm kiểm tra xem khung giờ có trống và khả dụng không
+    const isSlotAvailable = (courtId, date, hourStr, duration = 1) => {
+      const hProposed = parseInt(hourStr, 10);
+      
+      // Nếu là ngày hôm nay và giờ đề xuất đã qua hoặc là giờ hiện tại (đặt sát quá)
+      if (date === todayStr && hProposed <= currentHour) {
+        return false;
+      }
+      
+      const endProposed = hProposed + duration;
+
+      const hasConflict = allSchedules.some(b => {
+        if (b.status === 'rejected') return false;
+        const isSameCourt = String(b.courtId) === String(courtId);
+        if (!isSameCourt || b.date !== date) return false;
+        
+        const startExisting = parseInt(b.hour, 10);
+        const endExisting = startExisting + (b.duration || 1);
+        return hProposed < endExisting && startExisting < endProposed;
+      });
+
+      return !hasConflict;
+    };
+
+    // 3. Phân tích lịch sử đặt sân của user
+    const userBookings = await Booking.find({ userId, status: 'approved' });
+
+    if (userBookings.length > 0) {
+      // Tìm sân được đặt nhiều nhất
+      const courtCounts = {};
+      const hourCounts = {};
+      
+      userBookings.forEach(b => {
+        if (b.courtId) {
+          courtCounts[b.courtId] = (courtCounts[b.courtId] || 0) + 1;
+        }
+        if (b.hour) {
+          hourCounts[b.hour] = (hourCounts[b.hour] || 0) + 1;
+        }
+      });
+
+      // Sắp xếp tìm sân yêu thích nhất
+      const favoriteCourtId = Object.keys(courtCounts).reduce((a, b) => courtCounts[a] > courtCounts[b] ? a : b);
+      const favoriteHour = Object.keys(hourCounts).reduce((a, b) => hourCounts[a] > hourCounts[b] ? a : b);
+
+      const favCourt = activeCourts.find(c => String(c._id) === String(favoriteCourtId));
+
+      if (favCourt) {
+        // Kịch bản A: Sân yêu thích trống vào giờ quen thuộc ngày hôm nay
+        if (isSlotAvailable(favoriteCourtId, todayStr, favoriteHour)) {
+          return res.status(200).json({
+            success: true,
+            type: 'personalized',
+            message: `🎯 AI nhận thấy sân yêu thích ${favCourt.name} đang trống vào khung giờ quen thuộc lúc ${favoriteHour}:00 hôm nay! Đặt ngay!`,
+            court: favCourt,
+            date: todayStr,
+            hour: favoriteHour,
+            reason: 'Khung giờ quen thuộc của bạn vẫn còn trống tối nay!'
+          });
+        }
+
+        // Kịch bản B: Sân yêu thích trống vào giờ quen thuộc ngày mai
+        if (isSlotAvailable(favoriteCourtId, tomorrowStr, favoriteHour)) {
+          return res.status(200).json({
+            success: true,
+            type: 'personalized',
+            message: `🎯 Khung giờ vàng quen thuộc ${favoriteHour}:00 ngày mai tại sân yêu thích ${favCourt.name} đang chờ bạn! Đăng ký ngay!`,
+            court: favCourt,
+            date: tomorrowStr,
+            hour: favoriteHour,
+            reason: 'Khung giờ bạn hay đặt nhất trống vào ngày mai!'
+          });
+        }
+
+        // Kịch bản C: Tìm sân khác có trống vào giờ quen thuộc ngày hôm nay/ngày mai
+        for (const dateStr of [todayStr, tomorrowStr]) {
+          for (const court of activeCourts) {
+            if (isSlotAvailable(court._id, dateStr, favoriteHour)) {
+              return res.status(200).json({
+                success: true,
+                type: 'personalized',
+                message: `🏸 Khung giờ quen thuộc ${favoriteHour}:00 của bạn hôm nay tại ${court.name} đang trống. Đặt ngay để không bỏ lỡ buổi tập!`,
+                court: court,
+                date: dateStr,
+                hour: favoriteHour,
+                reason: 'Khung giờ quen thuộc của bạn trống ở sân khác!'
+              });
+            }
+          }
+        }
+
+        // Kịch bản D: Tìm sân yêu thích trống vào giờ lân cận (favoriteHour +/- 1, 2)
+        const hourOffsets = [1, -1, 2, -2];
+        for (const dateStr of [todayStr, tomorrowStr]) {
+          for (const offset of hourOffsets) {
+            const alternativeHour = parseInt(favoriteHour, 10) + offset;
+            // Chỉ kiểm tra giờ mở cửa từ 5h đến 21h
+            if (alternativeHour >= 5 && alternativeHour <= 21) {
+              const altHourStr = String(alternativeHour).padStart(2, '0');
+              if (isSlotAvailable(favoriteCourtId, dateStr, altHourStr)) {
+                return res.status(200).json({
+                  success: true,
+                  type: 'personalized',
+                  message: `💡 AI đề xuất: Sân yêu thích ${favCourt.name} trống lúc ${altHourStr}:00 (lệch ${Math.abs(offset)}h so với thói quen của bạn).`,
+                  court: favCourt,
+                  date: dateStr,
+                  hour: altHourStr,
+                  reason: 'Giờ lân cận trống tại sân bạn yêu thích nhất!'
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Nếu không có lịch sử chơi hoặc không tìm thấy slot trống phù hợp hành vi,
+    // gợi ý SÂN HOT NHẤT (Sân được đặt nhiều nhất hệ thống) vào khung giờ vàng
+    const systemCourtCounts = {};
+    const systemHourCounts = {};
+    const allApprovedBookings = await Booking.find({ status: 'approved' });
+
+    allApprovedBookings.forEach(b => {
+      if (b.courtId) systemCourtCounts[b.courtId] = (systemCourtCounts[b.courtId] || 0) + 1;
+      if (b.hour) systemHourCounts[b.hour] = (systemHourCounts[b.hour] || 0) + 1;
+    });
+
+    let trendingCourtId = Object.keys(systemCourtCounts).reduce((a, b) => systemCourtCounts[a] > systemCourtCounts[b] ? a : b, null);
+    let trendingHour = Object.keys(systemHourCounts).reduce((a, b) => systemHourCounts[a] > systemHourCounts[b] ? a : b, '18');
+
+    let trendingCourt = activeCourts.find(c => String(c._id) === String(trendingCourtId)) || activeCourts[0];
+
+    // Khung giờ vàng đề xuất mặc định: 18, 19, 17, 20
+    const primeHours = [trendingHour, '18', '19', '17', '20', '08', '09'];
+    for (const dateStr of [todayStr, tomorrowStr]) {
+      for (const court of activeCourts) {
+        for (const pHour of primeHours) {
+          const pHourStr = String(pHour).padStart(2, '0');
+          if (isSlotAvailable(court._id, dateStr, pHourStr)) {
+            const isToday = dateStr === todayStr;
+            return res.status(200).json({
+              success: true,
+              type: 'trending',
+              message: `🔥 Sân ${court.name} đang trống vào khung giờ vàng ${pHourStr}:00 ${isToday ? 'hôm nay' : 'ngày mai'}. Đặt sân trải nghiệm ngay!`,
+              court: court,
+              date: dateStr,
+              hour: pHourStr,
+              reason: 'Sân trống vào khung giờ vàng được yêu thích nhất hệ thống!'
+            });
+          }
+        }
+      }
+    }
+
+    // Fallback cuối cùng: Chọn bất kỳ giờ nào trống của sân đầu tiên
+    const allHours = ['18', '19', '17', '20', '08', '09', '15', '16', '06', '07'];
+    for (const dateStr of [todayStr, tomorrowStr]) {
+      for (const court of activeCourts) {
+        for (const h of allHours) {
+          const hStr = String(h).padStart(2, '0');
+          if (isSlotAvailable(court._id, dateStr, hStr)) {
+            return res.status(200).json({
+              success: true,
+              type: 'trending',
+              message: `🏸 Trải nghiệm ngay sân ${court.name} vào lúc ${hStr}:00 ${dateStr === todayStr ? 'tối nay' : 'ngày mai'}! Lên sân luyện tập nào!`,
+              court: court,
+              date: dateStr,
+              hour: hStr,
+              reason: 'Sân trống có sẵn dành cho bạn!'
+            });
+          }
+        }
+      }
+    }
+
+    // Nếu thực sự không còn bất kỳ slot trống nào
+    return res.status(200).json({
+      success: true,
+      type: 'none',
+      message: 'Xin lỗi bạn! Tất cả các sân và khung giờ trong 2 ngày tới đã kín lịch. Vui lòng quay lại sau.',
+      court: null,
+      date: '',
+      hour: ''
+    });
+
+  } catch (error) {
+    next(error);
+  }
 };

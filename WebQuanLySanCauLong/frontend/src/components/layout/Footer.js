@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="f-logo">
-        KONTUM <span>BADMINTON GROUP</span>
+        <span className="logo-brand">LTV</span> <span>BADMINTON GROUP</span>
       </div>
       <p>🏢 Địa chỉ: 704 Phan Đình Phùng, TP. Kon Tum</p>
       <p>📞 Hotline: 0339 310 915</p>

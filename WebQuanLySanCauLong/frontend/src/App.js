@@ -27,8 +27,17 @@ const defaultCourts = [
 
 const formatCourtData = (items) => {
   const source = Array.isArray(items) ? items : [];
+  if (source.length === 0) {
+    // Nếu database trống, trả về các sân mặc định với ObjectId giả lập hợp lệ
+    return defaultCourts.map((c, index) => ({
+      ...c,
+      id: `507f1f77bcf86cd79943901${index + 1}` // 24 ký tự hex hợp lệ làm Mongoose ObjectId
+    }));
+  }
+
+  // Nếu database có sân, chỉ hiển thị đúng các sân từ database
   const uniqueMap = new Map();
-  const formattedSource = source
+  return source
     .filter(c => c && typeof c === 'object')
     .map(c => ({
       id: c._id || c.id,
@@ -45,27 +54,8 @@ const formatCourtData = (items) => {
       const key = court.id || court.name;
       if (uniqueMap.has(key)) return false;
       uniqueMap.set(key, true);
-      return true;
+      return court.id && court.id.length === 24; // Chỉ lấy các sân có ID hợp lệ 24 ký tự
     });
-
-  const sourceByName = new Map(formattedSource.map(court => [court.name, court]));
-  const defaultNames = new Set(defaultCourts.map(dc => dc.name));
-  const sortedDefault = defaultCourts.map(defaultCourt => ({
-    ...defaultCourt,
-    ...sourceByName.get(defaultCourt.name)
-  }));
-
-  const extras = formattedSource
-    .filter(court => !defaultNames.has(court.name))
-    .sort((a, b) => {
-      const extractNumber = (text) => {
-        const match = String(text || '').match(/(\d+)/);
-        return match ? Number(match[1]) : 0;
-      };
-      return extractNumber(a.name) - extractNumber(b.name);
-    });
-
-  return [...sortedDefault, ...extras];
 };
 
 function App() {
@@ -101,6 +91,7 @@ function App() {
   const [resetToken, setResetToken] = useState(null);
   const [paymentData, setPaymentData] = useState(null);
   const [userNotifications, setUserNotifications] = useState([]);
+  const [aiRecommendation, setAiRecommendation] = useState(null);
   const [footerSettings, setFooterSettings] = useState({
     address: "704 Phan Đình Phùng, Phường Quang Trung, TP. Kon Tum, Tỉnh Kon Tum, Việt Nam",
     hotline: "0339 310 915",
@@ -116,20 +107,20 @@ function App() {
   ];
 
   // === KHỞI TẠO SÂN TỪ API, FALLBACK NẾU CẦN ===
+  const fetchCourts = async () => {
+    try {
+      const res = await API.get('/courts');
+      console.log('Dữ liệu sân từ API:', res.data);
+      const rawCourts = res.data.data ?? res.data;
+      const formattedCourts = formatCourtData(rawCourts);
+      setCourts(formattedCourts.length > 0 ? formattedCourts : defaultCourts);
+    } catch (err) {
+      console.error('Lỗi lấy sân từ API:', err);
+      setCourts(defaultCourts);
+    }
+  };
 
   useEffect(() => {
-    const fetchCourts = async () => {
-      try {
-        const res = await API.get('/courts');
-        console.log('Dữ liệu sân từ API:', res.data);
-        const rawCourts = res.data.data ?? res.data;
-        const formattedCourts = formatCourtData(rawCourts);
-        setCourts(formattedCourts.length > 0 ? formattedCourts : defaultCourts);
-      } catch (err) {
-        console.error('Lỗi lấy sân từ API:', err);
-        setCourts(defaultCourts);
-      }
-    };
     fetchCourts();
     fetchSchedules();
   }, []);
@@ -383,6 +374,20 @@ function App() {
     } catch (err) { console.error(err); }
   };
 
+  const fetchAIRecommendation = async () => {
+    try {
+      const res = await API.get('/bookings/ai-recommendations');
+      if (res.data.success && res.data.type !== 'none') {
+        setAiRecommendation(res.data);
+      } else {
+        setAiRecommendation(null);
+      }
+    } catch (err) {
+      console.error('Lỗi lấy gợi ý AI:', err);
+      setAiRecommendation(null);
+    }
+  };
+
   // === API CALLS ===
   const fetchSchedules = async () => {
     try {
@@ -418,6 +423,8 @@ function App() {
       } catch (err) {}
 
       fetchMyBookings();
+      fetchAIRecommendation();
+      fetchCourts();
       setShowSuccessPopup(true);
     } catch (err) {
       console.error('Lỗi đặt sân:', err);
@@ -430,6 +437,8 @@ function App() {
     try {
       await API.delete(`/bookings/${id}`);
       await fetchMyBookings();
+      fetchAIRecommendation();
+      fetchCourts();
     } catch (err) {
       console.error('Lỗi hủy:', err);
     }
@@ -508,10 +517,14 @@ function App() {
   // === EFFECTS ===
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setAiRecommendation(null);
+      return;
+    }
     if (['user', 'admin', 'manager', 'staff'].includes(user.role) && (user.id || user._id) && localStorage.getItem('token')) {
       fetchMyBookings();
       fetchUserNotifications();
+      fetchAIRecommendation();
     }
   }, [user]);
 
@@ -622,7 +635,7 @@ function App() {
         <div className="auth-container">
           <div className="auth-card fade-in">
             <div className="auth-info-side" style={{ backgroundImage: "linear-gradient(135deg, rgba(9, 13, 22, 0.65), rgba(30, 27, 75, 0.85)), url('/smash.jpg')" }}>
-              <div className="auth-logo">KONTUM <span>BADMINTON</span></div>
+              <div className="auth-logo"><span className="logo-brand">LTV</span> <span>BADMINTON</span></div>
               <h3>GIA NHẬP CỘNG ĐỒNG</h3>
               <p>Hệ thống quản lý và đặt sân chuyên nghiệp.</p>
               <button className="btn-back-home" onClick={() => setPage('home')}>QUAY LẠI</button>
@@ -647,7 +660,7 @@ function App() {
     <div className="w-full min-h-screen flex flex-col">
       <header className="header">
           <div className="logo" onClick={handleLogoClick}>
-            KONTUM <span>BADMINTON</span>
+            <span className="logo-brand">LTV</span> <span>BADMINTON</span>
           </div>
           <nav className="main-nav">
             <ul>
@@ -668,7 +681,6 @@ function App() {
               <div className={`user-avatar ${avatarRankClass}`} onClick={() => setShowUserMenu(prev => !prev)}>
                 {avatar ? <img src={avatar} className="avatar" alt="avatar" /> : <span>{avatarLetter}</span>}
               </div>
-              <div className="user-name-label">{shortName}</div>
               {showUserMenu && (
                 <div className="user-menu">
                   <div className="user-menu-header">
@@ -727,41 +739,157 @@ function App() {
         {page === 'home' && (
           <>
             {renderHero()}
-            {isUser && userBookings.length > 0 && quickCourt && (
-              <section className="returning-user-section">
-                <div className="returning-banner">
-                  <div>
-                    <p>Chào mừng trở lại!</p>
-                    <h2>Sân yêu thích của bạn <span>{quickCourt.name}</span> còn trống tối nay {String(quickHour).padStart(2, '0')}:00</h2>
+            {isAuthenticated && aiRecommendation && aiRecommendation.court && (
+              <section className="ai-recommendation-section" style={{
+                margin: '24px 0',
+                padding: '24px',
+                borderRadius: '24px',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 27, 75, 0.95))',
+                color: '#fff',
+                boxShadow: '0 10px 30px rgba(67, 97, 238, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+                animation: 'ai-glow 3s infinite alternate'
+              }}>
+                {/* Glow effect */}
+                <div style={{
+                  position: 'absolute',
+                  top: '-50%',
+                  right: '-20%',
+                  width: '250px',
+                  height: '250px',
+                  background: 'radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%)',
+                  filter: 'blur(30px)',
+                  pointerEvents: 'none'
+                }} />
+
+                <div className="ai-banner-container" style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '20px'
+                }}>
+                  <div style={{ flex: '1 1 500px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <span style={{
+                        background: aiRecommendation.type === 'personalized' 
+                          ? 'linear-gradient(135deg, #10b981, #059669)' 
+                          : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                        color: '#fff',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                      }}>
+                        {aiRecommendation.type === 'personalized' ? '🤖 AI Gợi Ý Cá Nhân Hóa' : '🔥 AI Đề Xuất Xu Hướng'}
+                      </span>
+                      <span style={{ color: '#818cf8', fontSize: '0.82rem', fontWeight: 600 }}>
+                        ● Trợ lý thông minh
+                      </span>
+                    </div>
+
+                    <h2 style={{
+                      fontSize: '1.45rem',
+                      fontWeight: 800,
+                      margin: '0 0 10px 0',
+                      lineHeight: '1.4',
+                      color: '#fff'
+                    }}>
+                      {aiRecommendation.message}
+                    </h2>
+
+                    <p style={{
+                      margin: '0',
+                      color: '#94a3b8',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      💡 <strong>Lý do chọn:</strong> {aiRecommendation.reason}
+                    </p>
                   </div>
-                  <div className="scarcity-box">
-                    <span>⏳ Khẩn cấp</span>
-                    <p>{quickCourt.name} còn {quickSlotsLeft} slot hôm nay</p>
+
+                  <div className="ai-action-box" style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    padding: '18px 24px',
+                    borderRadius: '18px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    flex: '1 1 300px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    backdropFilter: 'blur(10px)'
+                  }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>SÂN ĐỀ XUẤT</div>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fdb913' }}>{aiRecommendation.court.name}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>GIÁ SÂN</div>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fff' }}>
+                          {(Number(aiRecommendation.hour) >= 17 ? Math.floor(aiRecommendation.court.price * 1.3) : aiRecommendation.court.price).toLocaleString()}đ/h
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>NGÀY CHƠI</div>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fff' }}>
+                          {new Date(aiRecommendation.date + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>GIỜ CHƠI</div>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fff' }}>
+                          {aiRecommendation.hour}:00 – {Number(aiRecommendation.hour) + 1}:00
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      className="btn-primary"
+                      onClick={() => {
+                        // Tìm sân trong danh sách sân của client
+                        const fullCourtObj = courts.find(c => String(c.id || c._id) === String(aiRecommendation.court._id || aiRecommendation.court.id)) || aiRecommendation.court;
+                        setSelectedCourt(fullCourtObj);
+                        setSelectedDate(aiRecommendation.date);
+                        setSelectedHour(String(aiRecommendation.hour));
+                        setDuration(1);
+                        setPage('court-detail');
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #4361ee, #3b82f6)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '12px 20px',
+                        fontSize: '0.88rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(67, 97, 238, 0.4)',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <span>🤖 1-Click Đặt Ngay</span>
+                    </button>
                   </div>
                 </div>
-                <div className="quick-booking-card">
-                  <div>
-                    <h3>Đặt nhanh</h3>
-                    <p>Sân hay đặt nhất của bạn hôm nay.</p>
-                    <ul>
-                      <li><strong>Sân:</strong> {quickCourt.name}</li>
-                      <li><strong>Giờ đề xuất:</strong> {String(quickHour).padStart(2, '0')}:00</li>
-                      <li><strong>Ngày:</strong> {quickDate}</li>
-                    </ul>
-                  </div>
-                  <button
-                    className="btn-primary"
-                    onClick={() => {
-                      setSelectedCourt(quickCourt);
-                      setSelectedDate(quickDate);
-                      setSelectedHour(String(quickHour));
-                      setDuration(1);
-                      setPage('court-detail');
-                    }}
-                  >
-                    Đặt nhanh ngay
-                  </button>
-                </div>
+                
+                <style>{`
+                  @keyframes ai-glow {
+                    from { box-shadow: 0 10px 30px rgba(67, 97, 238, 0.2), border-color: rgba(99, 102, 241, 0.2); }
+                    to { box-shadow: 0 10px 40px rgba(99, 102, 241, 0.45), border-color: rgba(99, 102, 241, 0.6); }
+                  }
+                `}</style>
               </section>
             )}
             <section className="court-section">
@@ -852,6 +980,7 @@ function App() {
             setPage={setPage}
             setSelectedCourt={setSelectedCourt}
             user={user}
+            onRefreshCourts={fetchCourts}
           />
         )}
         {page === 'favorites' && (
@@ -868,7 +997,7 @@ function App() {
       </main>
 
       <footer className="footer">
-          <div className="f-logo">KONTUM <span>BADMINTON GROUP</span></div>
+          <div className="f-logo"><span className="logo-brand">LTV</span> <span>BADMINTON GROUP</span></div>
           <p>🏢 Địa chỉ: {footerSettings.address}</p>
           <p>📞 Hotline: {footerSettings.hotline}</p>
           <p>📧 Email: {footerSettings.email}</p>

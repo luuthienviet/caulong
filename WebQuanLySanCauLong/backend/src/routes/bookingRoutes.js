@@ -9,7 +9,8 @@ import {
   updateBookingPayment,
   deleteBooking,
   customerPayBooking,
-  getAllSchedules
+  getAllSchedules,
+  getAIRecommendations
 } from "../controllers/bookingController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
@@ -24,6 +25,7 @@ router.get("/all-schedules", getAllSchedules);
 router.use(authMiddleware);
 
 // Routes cho customer
+router.get("/ai-recommendations", getAIRecommendations);
 router.get("/my-bookings", getUserBookings);
 router.post("/", createBooking);
 router.delete("/:id", deleteBooking);

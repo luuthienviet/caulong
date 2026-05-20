@@ -73,6 +73,15 @@ body {
   color: var(--dark);
 }
 
+.logo-brand {
+  background: linear-gradient(135deg, #ff3366 0%, #33ccff 50%, #9900ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
 .admin-logo-badge {
   display: inline-flex;
   align-items: center;
