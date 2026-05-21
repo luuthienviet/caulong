@@ -23,7 +23,11 @@ const defaultCourts = [
   { id: 1, name: "SÂN SỐ 01 - VIP", price: 200000, desc: "Sân VIP, thảm Yonex cao cấp, ánh sáng chuẩn thi đấu.", status: "Trống", image: "https://www.alobo.vn/wp-content/uploads/2025/08/image-108.png" },
   { id: 2, name: "SÂN SỐ 02 - CHUẨN", price: 120000, desc: "Sân tiêu chuẩn thi đấu, phù hợp mọi trình độ.", status: "Trống", image: "https://sonsanepoxy.vn/wp-content/uploads/2023/07/Thi-cong-san-cau-long.jpg" },
   { id: 3, name: "SÂN SỐ 03 - THƯỜNG", price: 100000, desc: "Sân tiết kiệm, phù hợp tập luyện hằng ngày.", status: "Trống", image: "https://thethaothienlong.vn/wp-content/uploads/2022/04/Danh-sach-san-cau-long-o-tphcm-1.jpg" },
-  { id: 4, name: "SÂN SỐ 04 - VIP", price: 200000, desc: "Sân VIP mới, không gian rộng, ánh sáng chống chói.", status: "Trống", image: "https://tinphatsports.vn/wp-content/uploads/2024/05/thi-cong-san-bong-chuyen-17-1.jpg" }
+  { id: 4, name: "SÂN SỐ 04 - VIP", price: 200000, desc: "Sân VIP mới, không gian rộng, ánh sáng chống chói.", status: "Trống", image: "https://tinphatsports.vn/wp-content/uploads/2024/05/thi-cong-san-bong-chuyen-17-1.jpg" },
+  { id: 5, name: "SÂN SỐ 05 - VIP", price: 200000, desc: "Sân VIP đạt tiêu chuẩn quốc tế BWF, thảm Yonex dày 5mm, khán đài mini chuyên nghiệp.", status: "Trống", image: "https://plurysports.com/wp-content/uploads/2021/11/badminton-court-construction.jpg" },
+  { id: 6, name: "SÂN SỐ 06 - CHUẨN", price: 120000, desc: "Sân tiêu chuẩn thi đấu, không gian thoáng mát, hệ thống thông gió hiện đại.", status: "Trống", image: "https://onsport.vn/images/badminton-court.jpg" },
+  { id: 7, name: "SÂN SỐ 07 - THƯỜNG", price: 100000, desc: "Sân tập luyện phổ thông, ánh sáng tốt, phù hợp cho học sinh/sinh viên rèn luyện sức khỏe.", status: "Trống", image: "https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?q=80&w=2070" },
+  { id: 8, name: "SÂN SỐ 08 - CHUẨN", price: 120000, desc: "Sân tiêu chuẩn thi đấu chuyên nghiệp, hệ thống đèn chống lóa mắt tốt cho sức khỏe thị lực.", status: "Trống", image: "https://thethaodonga.com/wp-content/uploads/2022/10/kich-thuoc-san-cau-long-1.jpeg" }
 ];
 
 const formatCourtData = (items) => {
