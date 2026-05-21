@@ -11,7 +11,8 @@ import {
   getStaff,
   createStaff,
   updateStaff,
-  deleteStaff
+  deleteStaff,
+  getMe
 } from "../controllers/authController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
@@ -24,6 +25,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/users", authMiddleware, adminMiddleware, getUsers);
 router.put("/users/:id/lock", authMiddleware, adminMiddleware, toggleUserLock);
+router.get("/me", authMiddleware, getMe);
 router.put("/profile", authMiddleware, updateProfile);
 router.put("/change-password", authMiddleware, changePassword);
 

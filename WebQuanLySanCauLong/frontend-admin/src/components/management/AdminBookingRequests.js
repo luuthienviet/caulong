@@ -431,7 +431,7 @@ export default function AdminBookingRequests({
                         Chi tiết
                       </button>
 
-                      {["pending", "approved"].includes(status) ? (
+                      {status === "approved" ? (
                         <button
                           onClick={() => setShowRejectModal(req)}
                           className="inline-flex items-center gap-1 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 px-4 py-2.5 text-xs font-bold hover:bg-rose-100 hover:border-rose-300 transition active:scale-95 cursor-pointer"
@@ -439,7 +439,7 @@ export default function AdminBookingRequests({
                           <X size={12} className="stroke-[3]" />
                           Hủy lịch
                         </button>
-                      ) : (
+                      ) : status === "pending" ? null : (
                         <button
                           onClick={() => {
                             if (window.confirm("Bạn có chắc chắn muốn xóa vĩnh viễn đơn đặt sân này khỏi cơ sở dữ liệu?")) {

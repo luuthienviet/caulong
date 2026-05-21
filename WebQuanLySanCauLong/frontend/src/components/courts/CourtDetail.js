@@ -443,6 +443,7 @@ export default function CourtDetail({
   const [dragging, setDragging] = useState(false);
   const [selectionAnchor, setSelectionAnchor] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isRedeemingPoints, setIsRedeemingPoints] = useState(false);
 
   const hours = ['05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'];
   const today = new Date().toISOString().split('T')[0];
@@ -559,12 +560,33 @@ export default function CourtDetail({
     }
   };
   const priceForHour = h => Number(h) >= 17 ? Math.floor(selectedCourt.price * 1.3) : selectedCourt.price;
-  const totalPrice = (() => {
+  const originalPrice = (() => {
     if (selectionRange.start == null) return 0;
     let t = 0;
     for (let i = selectionRange.start; i <= selectionRange.end; i++) t += priceForHour(hours[i]);
     return t;
   })();
+
+  const discountPercentage = (() => {
+    if (duration >= 7) return 20;
+    if (duration >= 3) return 10;
+    return 0;
+  })();
+
+  const discountAmount = Math.floor(originalPrice * discountPercentage / 100);
+  const priceAfterDurationDiscount = originalPrice - discountAmount;
+
+  // Thành viên & Tích điểm
+  const userPoints = user?.points || 0;
+  const membershipName = userPoints >= 5000 ? "Bạch Kim" : userPoints >= 1000 ? "Vàng" : "Bạc";
+  const membershipDiscountPercent = userPoints >= 5000 ? 10 : userPoints >= 1000 ? 5 : 0;
+  const membershipDiscountAmount = Math.floor(priceAfterDurationDiscount * membershipDiscountPercent / 100);
+  const priceAfterMembership = priceAfterDurationDiscount - membershipDiscountAmount;
+
+  const pointsToRedeem = isRedeemingPoints ? Math.min(userPoints, Math.floor(priceAfterMembership)) : 0;
+  const pointsDiscountAmount = pointsToRedeem; // 1 điểm = 1đ
+
+  const totalPrice = priceAfterMembership - pointsDiscountAmount;
   const deposit = Math.floor(totalPrice * 0.5);
 
   const slotMeta = {
@@ -610,6 +632,7 @@ export default function CourtDetail({
       customerName: customerName.trim(),
       customerPhone: customerPhone.replace(/\s+/g, ''),
       customerNote: customerNote.trim(), user,
+      pointsRedeemed: pointsToRedeem,
     });
   };
 
@@ -812,6 +835,47 @@ export default function CourtDetail({
                   </div>
                 </div>
 
+                {/* Thành viên & Tích điểm UI */}
+                {user && (
+                  <div style={{
+                    background: '#f8fafc', borderRadius: 14, padding: '14px 16px',
+                    marginBottom: 16, border: '1px solid #e2e8f0', fontSize: '0.88rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontWeight: 600, color: '#334155' }}>🎖️ Cấp độ LTV:</span>
+                      <span style={{
+                        background: membershipName === 'Bạch Kim' ? 'linear-gradient(135deg,#6366f1,#3b82f6)' :
+                                   membershipName === 'Vàng' ? 'linear-gradient(135deg,#f59e0b,#d97706)' :
+                                   '#94a3b8',
+                        color: '#fff', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700
+                      }}>
+                        Hạng {membershipName} {membershipDiscountPercent > 0 && `(Giảm ${membershipDiscountPercent}%)`}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ color: '#64748b' }}>💎 Điểm hiện có:</span>
+                      <strong style={{ color: '#0f172a' }}>{userPoints.toLocaleString()} điểm</strong>
+                    </div>
+                    {userPoints > 0 && (
+                      <div style={{
+                        marginTop: 10, paddingTop: 10, borderTop: '1.5px dashed #e2e8f0',
+                        display: 'flex', alignItems: 'center', gap: 8
+                      }}>
+                        <input
+                          type="checkbox"
+                          id="redeemPointsCheckbox"
+                          checked={isRedeemingPoints}
+                          onChange={e => setIsRedeemingPoints(e.target.checked)}
+                          style={{ width: 16, height: 16, cursor: 'pointer' }}
+                        />
+                        <label htmlFor="redeemPointsCheckbox" style={{ color: '#334155', cursor: 'pointer', fontWeight: 500, fontSize: '0.8rem' }}>
+                          Dùng điểm đổi giảm giá (Tiêu <strong style={{ color: '#4361ee' }}>{Math.min(userPoints, Math.floor(priceAfterMembership)).toLocaleString()} điểm</strong> giảm <strong style={{ color: '#16a34a' }}>{Math.min(userPoints, Math.floor(priceAfterMembership)).toLocaleString()}đ</strong>)
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Tổng tiền */}
                 <div style={{
                   background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', borderRadius: 14,
@@ -821,14 +885,48 @@ export default function CourtDetail({
                     display: 'flex', justifyContent: 'space-between', marginBottom: 6,
                     fontSize: '0.88rem', color: '#475569'
                   }}>
-                    <span>{duration} giờ × {selectedHour ? priceForHour(selectedHour).toLocaleString() : '—'} VNĐ</span>
-                    <strong style={{ color: '#1e293b' }}>{totalPrice.toLocaleString()} VNĐ</strong>
+                    <span>Tạm tính ({duration} giờ)</span>
+                    <strong style={{ color: '#1e293b' }}>{originalPrice.toLocaleString()} VNĐ</strong>
                   </div>
+                  
+                  {discountPercentage > 0 && (
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', marginBottom: 6,
+                      fontSize: '0.88rem', color: '#16a34a', fontWeight: 700
+                    }}>
+                      <span>Giảm giá giờ chơi ({discountPercentage}%)</span>
+                      <span>-{discountAmount.toLocaleString()} VNĐ</span>
+                    </div>
+                  )}
+
+                  {membershipDiscountPercent > 0 && (
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', marginBottom: 6,
+                      fontSize: '0.88rem', color: '#4f46e5', fontWeight: 700
+                    }}>
+                      <span>Thành viên {membershipName} (-{membershipDiscountPercent}%)</span>
+                      <span>-{membershipDiscountAmount.toLocaleString()} VNĐ</span>
+                    </div>
+                  )}
+
+                  {pointsDiscountAmount > 0 && (
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', marginBottom: 6,
+                      fontSize: '0.88rem', color: '#ea580c', fontWeight: 700
+                    }}>
+                      <span>Tiêu {pointsToRedeem.toLocaleString()} điểm tích lũy</span>
+                      <span>-{pointsDiscountAmount.toLocaleString()} VNĐ</span>
+                    </div>
+                  )}
+                  
                   <div style={{
                     display: 'flex', justifyContent: 'space-between',
-                    fontSize: '1rem', fontWeight: 800, color: '#4361ee'
+                    fontSize: '1rem', fontWeight: 800, color: '#4361ee',
+                    borderTop: '1px dashed #c7d2fe',
+                    paddingTop: 8
                   }}>
-                    <span>Tổng thanh toán</span><span>{totalPrice.toLocaleString()} VNĐ</span>
+                    <span>Tổng thanh toán</span>
+                    <span>{totalPrice.toLocaleString()} VNĐ</span>
                   </div>
                 </div>
 
@@ -1062,10 +1160,28 @@ export default function CourtDetail({
               </div>
               <div style={{
                 marginTop: 12, padding: '12px 14px', background: '#f0f4ff', borderRadius: 10,
-                display: 'flex', justifyContent: 'space-between'
+                display: 'flex', flexDirection: 'column', gap: 6
               }}>
-                <span style={{ color: '#64748b', fontSize: '0.88rem' }}>Tạm tính</span>
-                <strong style={{ color: '#4361ee', fontSize: '0.95rem' }}>{totalPrice.toLocaleString()}đ</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.88rem' }}>Tạm tính</span>
+                  <strong style={{ color: '#1e293b', fontSize: '0.92rem' }}>{originalPrice.toLocaleString()}đ</strong>
+                </div>
+                {discountPercentage > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontSize: '0.88rem', fontWeight: 700 }}>
+                    <span>Giảm giá ({discountPercentage}%)</span>
+                    <span>-{discountAmount.toLocaleString()}đ</span>
+                  </div>
+                )}
+                {membershipDiscountPercent > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4f46e5', fontSize: '0.88rem', fontWeight: 700 }}>
+                    <span>Thành viên {membershipName} (-{membershipDiscountPercent}%)</span>
+                    <span>-{membershipDiscountAmount.toLocaleString()}đ</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #c7d2fe', paddingTop: 6, marginTop: 4 }}>
+                  <span style={{ color: '#4361ee', fontSize: '0.88rem', fontWeight: 800 }}>Tạm tính tổng</span>
+                  <strong style={{ color: '#4361ee', fontSize: '1.05rem', fontWeight: 900 }}>{priceAfterMembership.toLocaleString()}đ</strong>
+                </div>
               </div>
             </div>
           )}
@@ -1098,6 +1214,46 @@ export default function CourtDetail({
                 <input type="text" value={customerNote} placeholder="Yêu cầu thêm..."
                   onChange={e => setCustomerNote(e.target.value)} style={mInputSt} />
               </div>
+              
+              {user && (
+                <div style={{
+                  background: '#f8fafc', borderRadius: 12, padding: '12px 14px',
+                  border: '1px solid #e2e8f0', fontSize: '0.85rem', marginTop: 6
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontWeight: 600, color: '#334155' }}>🎖️ Cấp độ LTV:</span>
+                    <span style={{
+                      background: membershipName === 'Bạch Kim' ? 'linear-gradient(135deg,#6366f1,#3b82f6)' :
+                                 membershipName === 'Vàng' ? 'linear-gradient(135deg,#f59e0b,#d97706)' :
+                                 '#94a3b8',
+                      color: '#fff', padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700
+                    }}>
+                      Hạng {membershipName} {membershipDiscountPercent > 0 && `(Giảm ${membershipDiscountPercent}%)`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ color: '#64748b' }}>💎 Điểm hiện có:</span>
+                    <strong style={{ color: '#0f172a' }}>{userPoints.toLocaleString()} điểm</strong>
+                  </div>
+                  {userPoints > 0 && (
+                    <div style={{
+                      marginTop: 8, paddingTop: 8, borderTop: '1px dashed #e2e8f0',
+                      display: 'flex', alignItems: 'center', gap: 8
+                    }}>
+                      <input
+                        type="checkbox"
+                        id="mRedeemPointsCheckbox"
+                        checked={isRedeemingPoints}
+                        onChange={e => setIsRedeemingPoints(e.target.checked)}
+                        style={{ width: 18, height: 18, cursor: 'pointer' }}
+                      />
+                      <label htmlFor="mRedeemPointsCheckbox" style={{ color: '#334155', cursor: 'pointer', fontWeight: 500, fontSize: '0.78rem' }}>
+                        Dùng điểm đổi giảm giá (Tiêu <strong>{Math.min(userPoints, Math.floor(priceAfterMembership)).toLocaleString()} điểm</strong> giảm <strong>{Math.min(userPoints, Math.floor(priceAfterMembership)).toLocaleString()}đ</strong>)
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <button onClick={() => {
@@ -1142,9 +1298,27 @@ export default function CourtDetail({
           <div style={{ ...mCard, padding: '16px 20px' }}>
             <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a', marginBottom: 12 }}>💳 Chi tiết thanh toán</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.88rem' }}>
-              <span style={{ color: '#64748b' }}>{duration} giờ × {priceForHour(selectedHour || '05').toLocaleString()}đ</span>
-              <span style={{ color: '#1e293b', fontWeight: 600 }}>{totalPrice.toLocaleString()}đ</span>
+              <span style={{ color: '#64748b' }}>Tạm tính ({duration} giờ)</span>
+              <span style={{ color: '#1e293b', fontWeight: 600 }}>{originalPrice.toLocaleString()}đ</span>
             </div>
+            {discountPercentage > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.88rem', color: '#16a34a', fontWeight: 700 }}>
+                <span>Giảm giá ({discountPercentage}%)</span>
+                <span>-{discountAmount.toLocaleString()}đ</span>
+              </div>
+            )}
+            {membershipDiscountPercent > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.88rem', color: '#4f46e5', fontWeight: 700 }}>
+                <span>Thành viên {membershipName} (-{membershipDiscountPercent}%)</span>
+                <span>-{membershipDiscountAmount.toLocaleString()}đ</span>
+              </div>
+            )}
+            {pointsDiscountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.88rem', color: '#ea580c', fontWeight: 700 }}>
+                <span>Tiêu {pointsToRedeem.toLocaleString()} điểm tích lũy</span>
+                <span>-{pointsDiscountAmount.toLocaleString()}đ</span>
+              </div>
+            )}
             <div style={{ height: 1, background: '#f0f2f8', margin: '8px 0' }} />
             <div style={{
               marginTop: 14, padding: '14px 16px',

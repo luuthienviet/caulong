@@ -80,7 +80,8 @@ export const createBooking = async (req, res, next) => {
       customerPhone,
       customerNote,
       transferContent,
-      paymentStatus
+      paymentStatus,
+      pointsRedeemed
     } = req.body;
     const userId = req.user.id;
     
@@ -106,6 +107,19 @@ export const createBooking = async (req, res, next) => {
         : `Khung giờ này đang trùng với lịch chờ duyệt (${conflict.hour}:00, thời lượng ${conflict.duration}h). Vui lòng chọn giờ khác.`;
       return res.status(400).json({ message });
     }
+
+    const user = await User.findById(userId);
+    let redeemed = 0;
+    if (pointsRedeemed && user) {
+      redeemed = Math.min(user.points || 0, Math.floor(Number(pointsRedeemed)));
+      if (redeemed > 0) {
+        user.points = Math.max(0, (user.points || 0) - redeemed);
+        await user.save();
+      }
+    }
+
+    const calculatedPointsEarned = Math.floor(total / 1000); // 1 điểm / 1.000đ
+
     const booking = await Booking.create({
       courtId,
       courtName,
@@ -121,13 +135,14 @@ export const createBooking = async (req, res, next) => {
       customerPhone,
       customerNote,
       transferContent,
+      pointsRedeemed: redeemed,
+      pointsEarned: calculatedPointsEarned,
       status: 'pending'
     });
-    const user = await User.findById(userId);
     const admin = await User.findOne({ role: 'admin' });
     if (admin?.email) {
       sendEmail(admin.email, "Yêu cầu đặt sân mới",
-        `<p>Khách <strong>${user.username}</strong> đặt sân <strong>${courtName}</strong> ngày <strong>${date}</strong> lúc <strong>${hour}:00</strong>. Vui lòng duyệt.</p>`
+        `<p>Khách <strong>${user ? user.username : 'Khách'}</strong> đặt sân <strong>${courtName}</strong> ngày <strong>${date}</strong> lúc <strong>${hour}:00</strong>. Vui lòng duyệt.</p>`
       ).catch(err => console.error('Email admin error:', err));
     }
     if (user?.email) {
@@ -234,15 +249,15 @@ export const adminCreateBooking = async (req, res, next) => {
     res.status(201).json({ success: true, data: booking });
   } catch (error) { next(error); }
 };
-
 export const updateBookingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status, reason } = req.body;
+
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ message: "Không tìm thấy đơn" });
+
     if (status === 'approved') {
-      const booking = await Booking.findById(id);
-      if (!booking) return res.status(404).json({ message: "Không tìm thấy đơn" });
-      
       const startProposed = parseInt(booking.hour, 10);
       const endProposed = startProposed + (booking.duration || 1);
       
@@ -265,23 +280,53 @@ export const updateBookingStatus = async (req, res, next) => {
         });
       }
     }
+
+    const oldStatus = booking.status;
     const updatePayload = { status };
     if (status === 'rejected') {
       updatePayload.rejectReason = reason || "";
     }
-    const booking = await Booking.findByIdAndUpdate(id, updatePayload, { new: true }).populate('userId', 'username name email phone');
-    if (!booking) return res.status(404).json({ message: "Không tìm thấy" });
-    if (status === 'approved' || status === 'rejected') {
-      const message = status === 'approved'
-        ? `✅ Đơn #${booking._id} đặt sân ${booking.courtName} ngày ${booking.date} lúc ${booking.hour}:00 đã được duyệt.`
-        : `❌ Đơn #${booking._id} đặt sân ${booking.courtName} ngày ${booking.date} lúc ${booking.hour}:00 bị từ chối.${reason ? ` Lý do: ${reason}` : ''}`;
-      const typeValue = status === 'approved' ? 'booking_approved' : 'booking_rejected';
-      const notifUserId = booking.userId?._id || booking.userId;
-      if (notifUserId) {
-        await Notification.create({ userId: notifUserId, bookingId: booking._id, message, type: typeValue });
+    const updatedBooking = await Booking.findByIdAndUpdate(id, updatePayload, { new: true }).populate('userId', 'username name email phone');
+    if (!updatedBooking) return res.status(404).json({ message: "Không tìm thấy" });
+
+    // Cập nhật điểm tích lũy thành viên
+    const targetUserId = updatedBooking.userId?._id || updatedBooking.userId;
+    if (targetUserId) {
+      const user = await User.findById(targetUserId);
+      if (user) {
+        if (oldStatus !== 'approved' && status === 'approved') {
+          // Cộng điểm tích lũy khi đơn được duyệt
+          const earned = updatedBooking.pointsEarned || Math.floor(updatedBooking.total / 1000);
+          user.points = (user.points || 0) + earned;
+          await user.save();
+        } else if (oldStatus === 'approved' && status === 'rejected') {
+          // Trừ điểm tích lũy đã cộng và hoàn lại điểm đã tiêu dùng khi đơn bị hủy sau khi đã duyệt
+          const earned = updatedBooking.pointsEarned || Math.floor(updatedBooking.total / 1000);
+          user.points = Math.max(0, (user.points || 0) - earned);
+          if (updatedBooking.pointsRedeemed > 0) {
+            user.points = (user.points || 0) + updatedBooking.pointsRedeemed;
+          }
+          await user.save();
+        } else if (oldStatus !== 'approved' && status === 'rejected') {
+          // Hoàn lại điểm đã tiêu dùng nếu đơn bị từ chối từ trạng thái chưa duyệt
+          if (updatedBooking.pointsRedeemed > 0) {
+            user.points = (user.points || 0) + updatedBooking.pointsRedeemed;
+            await user.save();
+          }
+        }
       }
     }
-    res.status(200).json({ success: true, data: booking });
+
+    if (status === 'approved' || status === 'rejected') {
+      const message = status === 'approved'
+        ? `✅ Đơn #${updatedBooking._id} đặt sân ${updatedBooking.courtName} ngày ${updatedBooking.date} lúc ${updatedBooking.hour}:00 đã được duyệt.`
+        : `❌ Đơn #${updatedBooking._id} đặt sân ${updatedBooking.courtName} ngày ${updatedBooking.date} lúc ${updatedBooking.hour}:00 bị từ chối.${reason ? ` Lý do: ${reason}` : ''}`;
+      const typeValue = status === 'approved' ? 'booking_approved' : 'booking_rejected';
+      if (targetUserId) {
+        await Notification.create({ userId: targetUserId, bookingId: updatedBooking._id, message, type: typeValue });
+      }
+    }
+    res.status(200).json({ success: true, data: updatedBooking });
   } catch (error) { next(error); }
 };
 export const updateBookingPayment = async (req, res, next) => {

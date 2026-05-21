@@ -18,6 +18,7 @@ import PaymentPage from "./pages/PaymentPage";
 import ContactPage from "./pages/ContactPage";
 import ChatBot from "./components/chatbot/ChatBot";
 import UtilityShop from "./components/shop/UtilityShop";
+import MembershipPage from "./pages/MembershipPage";
 
 const defaultCourts = [
   { id: 1, name: "SÂN SỐ 01 - VIP", price: 200000, desc: "Sân VIP, thảm Yonex cao cấp, ánh sáng chuẩn thi đấu.", status: "Trống", image: "https://www.alobo.vn/wp-content/uploads/2025/08/image-108.png" },
@@ -139,9 +140,23 @@ function App() {
     }
   };
 
+  // === REFRESH POINTS FROM SERVER ===
+  const refreshUserPoints = async () => {
+    if (!localStorage.getItem('token')) return;
+    try {
+      const res = await API.get('/auth/me');
+      if (res.data.success && res.data.user) {
+        login({ ...res.data.user, token: localStorage.getItem('token') });
+      }
+    } catch (err) {
+      // Token possibly expired, ignore
+    }
+  };
+
   useEffect(() => {
     fetchCourts();
     fetchSchedules();
+    refreshUserPoints(); // sync fresh points from DB on page load
   }, []);
 
   useEffect(() => {
@@ -167,11 +182,19 @@ function App() {
       paymentImage: null,
       status: "pending",
       paymentMethod: "tại sân",
-      paymentStatus: "pending"
+      paymentStatus: "pending",
+      pointsRedeemed: data.pointsRedeemed || 0
     };
     try {
       await API.post('/bookings', newBooking);
       alert("✅ Đăng ký sân thành công! Vui lòng chờ admin duyệt yêu cầu.");
+      
+      // Cập nhật điểm tích lũy trong client
+      if (data.pointsRedeemed > 0 && user) {
+        const updatedUser = { ...user, points: Math.max(0, (user.points || 0) - data.pointsRedeemed) };
+        login(updatedUser);
+      }
+
       fetchMyBookings();
       setSelectedCourt(null);
       setSelectedDate('');
@@ -219,7 +242,14 @@ function App() {
   const fetchUserNotifications = async () => {
     try {
       const res = await API.get('/notifications');
-      setUserNotifications(res.data.data);
+      const newNotifs = res.data.data || [];
+      // If any new booking_approved notification exists, refresh user points from server
+      const prevIds = new Set((userNotifications || []).map(n => String(n._id || n.id)));
+      const hasNewApproved = newNotifs.some(n => n.type === 'booking_approved' && !prevIds.has(String(n._id || n.id)));
+      if (hasNewApproved) {
+        refreshUserPoints();
+      }
+      setUserNotifications(newNotifs);
     } catch (err) {
       console.error('Lỗi lấy thông báo:', err);
     }
@@ -317,7 +347,7 @@ function App() {
   };
 
   const isValidVietnamPhone = (phone) => {
-    return /^0(3|5|7|8|9)\d{8}$/.test(phone);
+    return /^0\d{9}$/.test(phone);
   };
 
   const handleUserProfileSave = async () => {
@@ -326,7 +356,7 @@ function App() {
       return alert('Vui lòng nhập tên hiển thị hợp lệ');
     }
     if (userPhone && !isValidVietnamPhone(userPhone)) {
-      return alert('Số điện thoại không hợp lệ. Vui lòng nhập 10 số, bắt đầu bằng 03/05/07/08/09');
+      return alert('Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 số, bắt đầu bằng 0');
     }
     try {
       const updatedProfile = { name: userDisplayName, email: userEmail, phone: userPhone };
@@ -763,6 +793,19 @@ function App() {
                         )}
                       </div>
                       <div className="user-menu-field">{rankInfo.emoji} Hạng {rankText}</div>
+                      {user?.role === 'user' && (
+                        <div className="user-menu-field" style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                          <span style={{
+                            background: (user?.points||0) >= 5000 ? 'linear-gradient(135deg,#6366f1,#3b82f6)' :
+                                        (user?.points||0) >= 1000 ? 'linear-gradient(135deg,#f59e0b,#d97706)' :
+                                        '#94a3b8',
+                            color:'#fff', fontSize:'0.65rem', fontWeight:800, padding:'1px 7px', borderRadius:20
+                          }}>
+                            {(user?.points||0) >= 5000 ? 'Bạch Kim' : (user?.points||0) >= 1000 ? 'Vàng' : 'Bạc'}
+                          </span>
+                          💎 <strong style={{color:'#4361ee'}}>{(user?.points||0).toLocaleString()}</strong> điểm LTV
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="rank-progress">
@@ -788,6 +831,9 @@ function App() {
                   </div>
                   <div className="user-menu-separator" />
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); setPage('my-bookings'); }}>📋 Lịch đặt sân</div>
+                  {user?.role === 'user' && (
+                    <div className="menu-item" onClick={() => { setShowUserMenu(false); setPage('membership'); }}>🏅 Thành viên & Điểm</div>
+                  )}
                   <div className="menu-item" onClick={() => { 
                     setShowUserMenu(false); 
                     setPage('shop'); 
@@ -1070,6 +1116,9 @@ function App() {
         {page === 'map' && <MapPage />}
         {page === 'contact' && <ContactPage />}
         {page === 'shop' && <UtilityShop user={user} />}
+        {page === 'membership' && user?.role === 'user' && (
+          <MembershipPage user={user} onRefreshUser={refreshUserPoints} />
+        )}
       </main>
 
       <footer className="footer">

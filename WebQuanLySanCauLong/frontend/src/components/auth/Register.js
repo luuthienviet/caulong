@@ -19,8 +19,8 @@ export default function Register({ setPage, setAuthMode }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (phone && !/^0(3|5|7|8|9)\d{8}$/.test(phone)) {
-      return alert('Số điện thoại không hợp lệ. Vui lòng nhập 10 số, bắt đầu bằng 03/05/07/08/09');
+    if (phone && !/^0\d{9}$/.test(phone)) {
+      return alert('Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 số, bắt đầu bằng 0');
     }
     try {
       await API.post('/auth/register', { username, password, email, phone });

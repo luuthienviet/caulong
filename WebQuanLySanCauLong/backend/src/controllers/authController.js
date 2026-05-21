@@ -25,7 +25,7 @@ export const login = async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Sai mật khẩu" });
     const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET || '123456', { expiresIn: "7d" });
-    res.json({ token, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '', isLocked: user.isLocked } });
+    res.json({ token, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '', isLocked: user.isLocked, points: user.points || 0 } });
   } catch (error) { next(error); }
 };
 
@@ -45,6 +45,14 @@ export const forgotPassword = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+export const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password -resetPasswordToken -resetPasswordExpires');
+    if (!user) return res.status(404).json({ message: 'Người dùng không tồn tại' });
+    res.json({ success: true, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '', isLocked: user.isLocked, points: user.points || 0 } });
+  } catch (error) { next(error); }
+};
+
 export const updateProfile = async (req, res, next) => {
   try {
     const { name, email, phone } = req.body;
@@ -54,7 +62,7 @@ export const updateProfile = async (req, res, next) => {
     user.email = email ?? user.email;
     user.phone = phone ?? user.phone;
     await user.save();
-    res.json({ message: "Cập nhật thông tin thành công", user: { id: user._id, username: user.username, name: user.name, role: user.role, email: user.email, phone: user.phone } });
+    res.json({ message: "Cập nhật thông tin thành công", user: { id: user._id, username: user.username, name: user.name, role: user.role, email: user.email, phone: user.phone, points: user.points || 0 } });
   } catch (error) { next(error); }
 };
 
@@ -73,7 +81,7 @@ export const changePassword = async (req, res, next) => {
 
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find({ role: 'user' }).select('username name email phone createdAt isLocked');
+    const users = await User.find({ role: 'user' }).select('username name email phone points createdAt isLocked');
     res.status(200).json({ success: true, data: users });
   } catch (error) { next(error); }
 };

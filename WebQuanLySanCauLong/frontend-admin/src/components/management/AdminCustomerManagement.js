@@ -113,6 +113,7 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                 <th className="px-4 py-4 font-medium">Số điện thoại</th>
                 <th className="px-4 py-4 font-medium">Đơn đã đặt</th>
                 <th className="px-4 py-4 font-medium">Tổng chi</th>
+                <th className="px-4 py-4 font-medium">Hạng & Điểm</th>
                 <th className="px-4 py-4 font-medium">Lần đặt gần nhất</th>
                 <th className="px-4 py-4 font-medium">Trạng thái</th>
                 <th className="px-4 py-4 font-medium">Hành động</th>
@@ -121,7 +122,7 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
             <tbody>
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">Không tìm thấy khách hàng.</td>
+                  <td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Không tìm thấy khách hàng.</td>
                 </tr>
               ) : (
                 filteredCustomers.map((customer) => (
@@ -141,6 +142,18 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                     <td className="px-4 py-4 text-slate-600">{getUserPhone(customer)}</td>
                     <td className="px-4 py-4 font-semibold text-slate-900">{customer.totalBookings}</td>
                     <td className="px-4 py-4 font-semibold text-slate-900">{formatMoney(customer.totalSpent)}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold w-fit text-white ${
+                          (customer.points || 0) >= 5000 ? 'bg-gradient-to-r from-indigo-500 to-blue-500' :
+                          (customer.points || 0) >= 1000 ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+                          'bg-slate-400'
+                        }`}>
+                          {(customer.points || 0) >= 5000 ? 'Bạch Kim' : (customer.points || 0) >= 1000 ? 'Vàng' : 'Bạc'}
+                        </span>
+                        <span className="text-xs text-slate-500 font-semibold">{(customer.points || 0).toLocaleString()} điểm</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-4 text-slate-600">{customer.lastBooking ? new Date(customer.lastBooking).toLocaleDateString('vi-VN') : 'Chưa có'}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${customer.isLocked ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
@@ -192,6 +205,7 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                   <div><span className="font-semibold text-slate-900">SĐT:</span> {getUserPhone(customer)}</div>
                   <div><span className="font-semibold text-slate-900">Đơn đã đặt:</span> {customer.totalBookings}</div>
                   <div><span className="font-semibold text-slate-900">Tổng chi:</span> {formatMoney(customer.totalSpent)}</div>
+                  <div><span className="font-semibold text-slate-900">Hạng & Điểm:</span> <strong className="text-indigo-600">{(customer.points || 0) >= 5000 ? 'Bạch Kim' : (customer.points || 0) >= 1000 ? 'Vàng' : 'Bạc'}</strong> ({(customer.points || 0).toLocaleString()} điểm)</div>
                   <div><span className="font-semibold text-slate-900">Trạng thái:</span> {statusLabel(customer)}</div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">

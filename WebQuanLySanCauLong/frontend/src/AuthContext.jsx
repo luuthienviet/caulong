@@ -35,7 +35,8 @@ export const AuthProvider = ({ children }) => {
       name: userData.name || userData.username,
       phone: userData.phone || '',
       loginTime: new Date().toISOString(),
-      role: userData.role || 'user'
+      role: userData.role || 'user',
+      points: userData.points || 0
     };
     localStorage.setItem('ktb_user', JSON.stringify(ktbData));
     setUser(userData);
@@ -65,7 +66,8 @@ export const AuthProvider = ({ children }) => {
         name: user.name || user.username,
         phone: user.phone || '',
         loginTime,
-        role: user.role || 'user'
+        role: user.role || 'user',
+        points: user.points || 0
       };
       localStorage.setItem('ktb_user', JSON.stringify(ktbData));
     }

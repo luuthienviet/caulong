@@ -58,6 +58,14 @@ courtId: {
   rejectReason: {
     type: String
   },
+  pointsRedeemed: {
+    type: Number,
+    default: 0
+  },
+  pointsEarned: {
+    type: Number,
+    default: 0
+  },
   status: {
     type: String,
     enum: ["pending", "approved", "rejected"],
