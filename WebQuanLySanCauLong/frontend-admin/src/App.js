@@ -58,7 +58,7 @@ const formatCourtData = (items) => {
 
 function App() {
   // === STATES ===
-  const [page, setPage] = useState('login');
+  const [page, setPage] = useState(() => localStorage.getItem('admin_current_page') || 'login');
   const [courts, setCourts] = useState([]);
   const [bookingRequests, setBookingRequests] = useState([]);
   const [users, setUsers] = useState([]);
@@ -241,6 +241,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem("notifications", JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    localStorage.setItem('admin_current_page', page);
+  }, [page]);
 
   useEffect(() => {
     if (!user) return;

@@ -1,18 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Tag, Layers, ShoppingBag, AlertTriangle, ChevronRight } from 'lucide-react';
-
-const initialServices = [
-  { id: 1, name: "Revive Chanh Muối 500ml", category: "Nước uống", price: 15000, stock: 150, desc: "Nước bù khoáng Revive hương chanh muối giúp tiếp thêm sinh lực tức thì.", image: "https://images.unsplash.com/photo-1556881286-fc6915169721?w=500&auto=format&fit=crop&q=80" },
-  { id: 2, name: "Nước suối Aquafina 500ml", category: "Nước uống", price: 8000, stock: 220, desc: "Nước uống đóng chai tinh khiết Aquafina tốt cho sức khỏe.", image: "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=500&auto=format&fit=crop&q=80" },
-  { id: 3, name: "Thuê vợt Yonex Astrox 99", category: "Thuê dụng cụ", price: 50000, stock: 10, desc: "Vợt Yonex Astrox 99 cao cấp dành cho người chơi tấn công mạnh mẽ.", image: "https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=500&auto=format&fit=crop&q=80" },
-  { id: 4, name: "Thuê giày Victor Auraspeed", category: "Thuê dụng cụ", price: 40000, stock: 8, desc: "Giày cầu lông Victor êm ái, bám sân cực tốt đầy đủ size.", image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=500&auto=format&fit=crop&q=80" },
-  { id: 5, name: "Hộp cầu lông Thành Công", category: "Phụ kiện", price: 230000, stock: 45, desc: "Hộp 12 quả cầu lông Thành Công chuẩn thi đấu câu lạc bộ.", image: "https://images.unsplash.com/photo-1613918108466-292b78a8ef95?w=500&auto=format&fit=crop&q=80" },
-  { id: 6, name: "Cuốn cán vợt Yonex chống trơn", category: "Phụ kiện", price: 20000, stock: 120, desc: "Cuốn cán vợt cao su non giúp cầm vợt êm tay và thấm hút mồ hôi.", image: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=500&auto=format&fit=crop&q=80" },
-  { id: 7, name: "Bánh mì xúc xích kẹp phô mai", category: "Đồ ăn", price: 25000, stock: 0, desc: "Bánh mì nướng nóng hổi ăn nhẹ phục hồi năng lượng giữa các set đấu.", image: "https://images.unsplash.com/photo-1541214113241-21578d2d9b62?w=500&auto=format&fit=crop&q=80" }
-];
+import API from '../../api';
 
 export default function AdminServiceManagement({ user }) {
-  const [services, setServices] = useState(initialServices);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [stockFilter, setStockFilter] = useState('All');
@@ -30,6 +22,33 @@ export default function AdminServiceManagement({ user }) {
   });
 
   const categories = ["Nước uống", "Đồ ăn", "Thuê dụng cụ", "Phụ kiện"];
+
+  // Fetch from API
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      const res = await API.get('/services');
+      const raw = res.data.data ?? res.data ?? [];
+      const formatted = raw.map(s => ({
+        id: s._id || s.id,
+        name: s.name,
+        category: s.category,
+        price: s.price,
+        stock: s.stock,
+        desc: s.desc || '',
+        image: s.image || ''
+      }));
+      setServices(formatted);
+    } catch (err) {
+      console.error('Lỗi lấy dịch vụ từ API:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
   // Open modal
   const handleOpenModal = (service = null) => {
@@ -67,36 +86,73 @@ export default function AdminServiceManagement({ user }) {
   };
 
   // Submit form
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingService) {
-      setServices(prev => prev.map(item => item.id === editingService.id ? { ...item, ...formData } : item));
-    } else {
-      const newService = {
-        id: Date.now(),
-        ...formData
-      };
-      setServices(prev => [...prev, newService]);
+    try {
+      if (editingService) {
+        const res = await API.put(`/services/${editingService.id}`, formData);
+        const updated = res.data.data;
+        setServices(prev => prev.map(item => item.id === editingService.id ? {
+          ...item,
+          id: updated._id || updated.id,
+          name: updated.name,
+          category: updated.category,
+          price: updated.price,
+          stock: updated.stock,
+          desc: updated.desc || '',
+          image: updated.image || ''
+        } : item));
+        alert('Cập nhật thành công!');
+      } else {
+        const res = await API.post('/services', formData);
+        const created = res.data.data;
+        setServices(prev => [...prev, {
+          id: created._id || created.id,
+          name: created.name,
+          category: created.category,
+          price: created.price,
+          stock: created.stock,
+          desc: created.desc || '',
+          image: created.image || ''
+        }]);
+        alert('Thêm dịch vụ thành công!');
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error('Lỗi lưu dịch vụ:', err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu!');
     }
-    setShowModal(false);
   };
 
   // Delete Service
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa dịch vụ này?")) {
-      setServices(prev => prev.filter(item => item.id !== id));
+      try {
+        await API.delete(`/services/${id}`);
+        setServices(prev => prev.filter(item => item.id !== id));
+        alert('Xóa thành công!');
+      } catch (err) {
+        console.error('Lỗi xóa dịch vụ:', err);
+        alert('Xóa thất bại!');
+      }
     }
   };
 
   // Quick stock change
-  const adjustStock = (id, amount) => {
-    setServices(prev => prev.map(item => {
-      if (item.id === id) {
-        const nextStock = Math.max(0, item.stock + amount);
-        return { ...item, stock: nextStock };
-      }
-      return item;
-    }));
+  const adjustStock = async (id, amount) => {
+    const service = services.find(item => item.id === id);
+    if (!service) return;
+    const nextStock = Math.max(0, service.stock + amount);
+    try {
+      const res = await API.put(`/services/${id}`, { stock: nextStock });
+      const updated = res.data.data;
+      setServices(prev => prev.map(item => item.id === id ? {
+        ...item,
+        stock: updated.stock
+      } : item));
+    } catch (err) {
+      console.error('Lỗi lưu tồn kho:', err);
+    }
   };
 
   // Filtered services
@@ -125,6 +181,15 @@ export default function AdminServiceManagement({ user }) {
     const lowStock = services.filter(s => s.stock > 0 && s.stock <= 10).length;
     return { total, categoriesCount, outOfStock, lowStock };
   }, [services]);
+
+  if (loading) {
+    return (
+      <section className="mt-8 rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+        <p className="mt-4 text-slate-500 text-sm font-semibold">Đang tải danh sách dịch vụ...</p>
+      </section>
+    );
+  }
 
   return (
     <section className="mt-8 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">

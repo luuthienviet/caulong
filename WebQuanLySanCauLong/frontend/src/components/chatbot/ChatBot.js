@@ -100,7 +100,7 @@ export default function ChatBot() {
         title="Trợ lý ảo LTV AI"
       >
         <div className="trigger-pulse"></div>
-        <img src="/ai_avatar.png" alt="bot avatar" className="trigger-avatar-img" />
+        <img src="/favicon.png" alt="bot avatar" className="trigger-avatar-img" />
       </button>
 
       {/* Cửa sổ Chatbot */}
@@ -111,7 +111,7 @@ export default function ChatBot() {
           <div className="chatbot-header">
             <div className="header-info">
               <div className="bot-avatar-container">
-                <img src="/ai_avatar.png" alt="bot avatar" className="bot-header-img" />
+                <img src="/favicon.png" alt="bot avatar" className="bot-header-img" />
                 <span className="online-indicator"></span>
               </div>
               <div>
@@ -130,7 +130,7 @@ export default function ChatBot() {
             {messages.map(msg => (
               <div key={msg.id} className={`message-row ${msg.sender}`}>
                 {msg.sender === 'bot' && (
-                  <img src="/ai_avatar.png" alt="bot avatar" className="bot-mini-avatar-img" />
+                  <img src="/favicon.png" alt="bot avatar" className="bot-mini-avatar-img" />
                 )}
                 <div className="message-bubble">
                   <div className="message-text">
@@ -166,7 +166,7 @@ export default function ChatBot() {
             {/* Typing indicator */}
             {isTyping && (
               <div className="message-row bot">
-                <img src="/ai_avatar.png" alt="bot avatar" className="bot-mini-avatar-img" />
+                <img src="/favicon.png" alt="bot avatar" className="bot-mini-avatar-img" />
                 <div className="message-bubble typing-bubble">
                   <div className="typing-indicator">
                     <span></span>

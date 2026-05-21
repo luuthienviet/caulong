@@ -17,6 +17,7 @@ import MapPage from "./pages/MapPage";
 import PaymentPage from "./pages/PaymentPage";
 import ContactPage from "./pages/ContactPage";
 import ChatBot from "./components/chatbot/ChatBot";
+import UtilityShop from "./components/shop/UtilityShop";
 
 const defaultCourts = [
   { id: 1, name: "SÂN SỐ 01 - VIP", price: 200000, desc: "Sân VIP, thảm Yonex cao cấp, ánh sáng chuẩn thi đấu.", status: "Trống", image: "https://www.alobo.vn/wp-content/uploads/2025/08/image-108.png" },
@@ -60,14 +61,21 @@ const formatCourtData = (items) => {
 
 function App() {
   // === STATES ===
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState(() => localStorage.getItem('user_current_page') || 'home');
   const [courts, setCourts] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [paymentProof, setPaymentProof] = useState({});
-  const [selectedCourt, setSelectedCourt] = useState(null);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedHour, setSelectedHour] = useState("");
-  const [duration, setDuration] = useState(1);
+  const [selectedCourt, setSelectedCourt] = useState(() => {
+    try {
+      const stored = localStorage.getItem('user_selected_court');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [selectedDate, setSelectedDate] = useState(() => localStorage.getItem('user_selected_date') || "");
+  const [selectedHour, setSelectedHour] = useState(() => localStorage.getItem('user_selected_hour') || "");
+  const [duration, setDuration] = useState(() => Number(localStorage.getItem('user_booking_duration')) || 1);
   const [showDepositStep, setShowDepositStep] = useState(false);
   const [bookingRequests, setBookingRequests] = useState([]);
   const [allSchedules, setAllSchedules] = useState([]);
@@ -78,7 +86,7 @@ function App() {
   const [avatar, setAvatar] = useState(localStorage.getItem("avatar") || null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
-  const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [selectedBookingId, setSelectedBookingId] = useState(() => localStorage.getItem('user_selected_booking_id') || null);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [userDisplayName, setUserDisplayName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -89,7 +97,14 @@ function App() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [favorites, setFavorites] = useState([]);
   const [resetToken, setResetToken] = useState(null);
-  const [paymentData, setPaymentData] = useState(null);
+  const [paymentData, setPaymentData] = useState(() => {
+    try {
+      const stored = localStorage.getItem('user_payment_data');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [userNotifications, setUserNotifications] = useState([]);
   const [aiRecommendation, setAiRecommendation] = useState(null);
   const [footerSettings, setFooterSettings] = useState({
@@ -188,6 +203,7 @@ function App() {
     { label: '🏠 TRANG CHỦ', page: 'home', visible: true },
     { label: '🔎 TRA CỨU ĐƠN', page: 'order-lookup', visible: !user },
     { label: '📋 LỊCH ĐẶT SÂN', page: 'my-bookings', visible: true },
+    { label: '🛒 CỬA HÀNG', page: 'shop', visible: true },
     { label: '🗺️ BẢN ĐỒ', page: 'map', visible: true },
     { label: '📞 LIÊN HỆ', page: 'contact', visible: true },
   ];
@@ -547,6 +563,55 @@ function App() {
     localStorage.setItem('ktb_user', JSON.stringify(savedUser));
   }, [user]);
 
+  // === PERSIST STATE EFFECTS ===
+  useEffect(() => {
+    localStorage.setItem('user_current_page', page);
+  }, [page]);
+
+  useEffect(() => {
+    if (selectedCourt) {
+      localStorage.setItem('user_selected_court', JSON.stringify(selectedCourt));
+    } else {
+      localStorage.removeItem('user_selected_court');
+    }
+  }, [selectedCourt]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      localStorage.setItem('user_selected_date', selectedDate);
+    } else {
+      localStorage.removeItem('user_selected_date');
+    }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (selectedHour) {
+      localStorage.setItem('user_selected_hour', selectedHour);
+    } else {
+      localStorage.removeItem('user_selected_hour');
+    }
+  }, [selectedHour]);
+
+  useEffect(() => {
+    localStorage.setItem('user_booking_duration', String(duration));
+  }, [duration]);
+
+  useEffect(() => {
+    if (selectedBookingId) {
+      localStorage.setItem('user_selected_booking_id', selectedBookingId);
+    } else {
+      localStorage.removeItem('user_selected_booking_id');
+    }
+  }, [selectedBookingId]);
+
+  useEffect(() => {
+    if (paymentData) {
+      localStorage.setItem('user_payment_data', JSON.stringify(paymentData));
+    } else {
+      localStorage.removeItem('user_payment_data');
+    }
+  }, [paymentData]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide(prev => (prev === bannerData.length - 1 ? 0 : prev + 1));
@@ -719,7 +784,13 @@ function App() {
                   </div>
                   <div className="user-menu-separator" />
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); setPage('my-bookings'); }}>📋 Lịch đặt sân</div>
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setPage('favorites'); }}>❤️ Yêu thích</div>
+                  <div className="menu-item" onClick={() => { 
+                    setShowUserMenu(false); 
+                    setPage('shop'); 
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('open-cart'));
+                    }, 100);
+                  }}>🛒 Giỏ hàng</div>
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); setPage('notifications'); }}>🔔 Thông báo</div>
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); handleOpenUserProfile(); }}>⚙️ Cập nhật thông tin</div>
                   <div className="user-menu-separator" />
@@ -879,7 +950,7 @@ function App() {
                         gap: '8px'
                       }}
                     >
-                      <span>🤖 1-Click Đặt Ngay</span>
+                      <span>Đặt Ngay</span>
                     </button>
                   </div>
                 </div>
@@ -994,6 +1065,7 @@ function App() {
         )}
         {page === 'map' && <MapPage />}
         {page === 'contact' && <ContactPage />}
+        {page === 'shop' && <UtilityShop user={user} />}
       </main>
 
       <footer className="footer">
