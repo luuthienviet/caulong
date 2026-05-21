@@ -777,8 +777,20 @@ function App() {
           <div className="header-auth-section">
           {isAuthenticated ? (
             <div className="user-avatar-wrapper logged-in-avatar">
-              <div className={`user-avatar ${avatarRankClass}`} onClick={() => setShowUserMenu(prev => !prev)}>
-                {avatar ? <img src={avatar} className="avatar" alt="avatar" /> : <span>{avatarLetter}</span>}
+              <div style={{ position: 'relative' }}>
+                <div className={`user-avatar ${avatarRankClass}`} onClick={() => setShowUserMenu(prev => !prev)}>
+                  {avatar ? <img src={avatar} className="avatar" alt="avatar" /> : <span>{avatarLetter}</span>}
+                </div>
+                {userNotifications.filter(n => !n.read).length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: -2, right: -6, background: '#ef4444', color: '#fff',
+                    borderRadius: '12px', padding: '1px 5px', fontSize: '0.65rem', fontWeight: 800,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)', pointerEvents: 'none', zIndex: 10,
+                    minWidth: '18px', textAlign: 'center', border: '1.5px solid #fff'
+                  }}>
+                    {userNotifications.filter(n => !n.read).length > 99 ? '99+' : userNotifications.filter(n => !n.read).length}
+                  </div>
+                )}
               </div>
               {showUserMenu && (
                 <div className="user-menu">
@@ -841,7 +853,18 @@ function App() {
                       window.dispatchEvent(new CustomEvent('open-cart'));
                     }, 100);
                   }}>🛒 Giỏ hàng</div>
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setPage('notifications'); }}>🔔 Thông báo</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setPage('notifications'); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>🔔 Thông báo</span>
+                    {userNotifications.filter(n => !n.read).length > 0 && (
+                      <span style={{
+                        background: '#ef4444', color: '#fff', borderRadius: '10px',
+                        padding: '1px 6px', fontSize: '0.75rem', fontWeight: 700,
+                        boxShadow: '0 2px 5px rgba(239, 68, 68, 0.3)'
+                      }}>
+                        {userNotifications.filter(n => !n.read).length}
+                      </span>
+                    )}
+                  </div>
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); handleOpenUserProfile(); }}>⚙️ Cập nhật thông tin</div>
                   <div className="user-menu-separator" />
                   <div className="menu-item logout" onClick={handleUserLogout}>🚪 Đăng xuất</div>
@@ -1179,6 +1202,39 @@ function App() {
 
 
       {showSuccessPopup && <SuccessPopup onClose={() => setShowSuccessPopup(false)} />}
+      {/* Nút Zalo nổi */}
+      <a
+        href={`https://zalo.me/${footerSettings.hotline.replace(/\s/g,'')}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Chat Zalo với LTV Badminton"
+        style={{
+          position: 'fixed',
+          bottom: 96,
+          right: 24,
+          width: 60,
+          height: 60,
+          borderRadius: '50%',
+          background: '#0068ff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 10px 25px -5px rgba(0,104,255,0.45)',
+          zIndex: 9998,
+          textDecoration: 'none',
+          border: '2px solid #fff',
+          transition: 'transform .3s cubic-bezier(.175,.885,.32,1.275), box-shadow .3s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.08) translateY(-3px)'; e.currentTarget.style.boxShadow='0 15px 30px -5px rgba(0,104,255,.6)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 10px 25px -5px rgba(0,104,255,.45)'; }}
+      >
+        {/* Zalo official logo */}
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg"
+          alt="Zalo"
+          style={{ width: 38, height: 38, objectFit: 'contain' }}
+        />
+      </a>
       <ChatBot />
     </div>
   );

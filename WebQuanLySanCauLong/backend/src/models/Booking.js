@@ -35,7 +35,7 @@ courtId: {
   },
   paymentMethod: {
     type: String,
-    enum: ["tại sân", "chuyển khoản cọc", "cash", "transfer"],
+    enum: ["tại sân", "chuyển khoản cọc", "chuyển khoản", "cash", "transfer"],
     default: "tại sân"
   },
   paymentStatus: {

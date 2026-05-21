@@ -399,32 +399,7 @@ export default function BookingHistory({
         </div>
       )}
 
-      {/* ── Support bar ── */}
-      <div style={{
-        marginTop: 36, background: "linear-gradient(135deg,#f0f9ff,#e0f2fe)",
-        borderRadius: 16, padding: "20px 24px", border: "1.5px solid #bae6fd",
-        display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14,
-      }}>
-        <div>
-          <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>📞 Cần hỗ trợ?</div>
-          <div style={{ fontSize: "0.85rem", color: "#475569" }}>Liên hệ admin để được giải đáp nhanh nhất.</div>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <a href={`tel:${adminPhone}`} style={{
-            padding: "9px 20px", borderRadius: 10, background: "#4361ee",
-            color: "#fff", fontWeight: 700, fontSize: "0.85rem", textDecoration: "none",
-          }}>
-            📞 Gọi ngay
-          </a>
-          <a href={`https://zalo.me/${adminPhone}`} target="_blank" rel="noopener noreferrer" style={{
-            padding: "9px 20px", borderRadius: 10, background: "#fff",
-            border: "1.5px solid #4361ee", color: "#4361ee",
-            fontWeight: 700, fontSize: "0.85rem", textDecoration: "none",
-          }}>
-            💬 Zalo
-          </a>
-        </div>
-      </div>
+
 
       <style>{`
         @media (max-width: 640px) {

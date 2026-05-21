@@ -1,338 +1,331 @@
-import { useMemo, useState, Fragment } from 'react';
+import { useMemo, useState } from 'react';
 import API from '../../api';
 
-const statusLabels = {
-  success: { label: 'Thành công', badge: 'bg-emerald-100 text-emerald-800' },
-  processing: { label: 'Đang xử lý', badge: 'bg-amber-100 text-amber-800' },
-  failed: { label: 'Thất bại', badge: 'bg-rose-100 text-rose-700' }
+const fmtCurrency = (v) => (v || 0).toLocaleString('vi-VN') + ' VNĐ';
+const fmtDateTime = (v) => { if (!v) return '—'; const d = new Date(v); return isNaN(d) ? v : d.toLocaleString('vi-VN', { hour12: false }); };
+const fmtDate = (v) => { if (!v) return ''; const d = new Date(v); return isNaN(d) ? v : d.toISOString().slice(0, 10); };
+const methodLabel = (m) => { if (!m) return 'Chưa rõ'; const l = m.toLowerCase(); if (l.includes('cash') || l.includes('tại sân') || l.includes('tiền mặt')) return 'Tiền mặt'; return 'Chuyển khoản'; };
+const mapStatus = (b) => { if (b.status === 'rejected') return 'failed'; if (b.paymentStatus === 'paid' || b.paymentStatus === 'remaining_paid') return 'success'; if (b.paymentStatus === 'deposit_sent') return 'bill_sent'; return 'processing'; };
+const STATUS_CFG = {
+  success:    { label: 'Đã thanh toán', bg: '#dcfce7', color: '#15803d' },
+  bill_sent:  { label: 'Có biên lai',   bg: '#dbeafe', color: '#1d4ed8' },
+  processing: { label: 'Chờ xử lý',    bg: '#fef9c3', color: '#a16207' },
+  failed:     { label: 'Thất bại',      bg: '#fee2e2', color: '#b91c1c' },
 };
 
-const mapPaymentStatus = (booking) => {
-  if (booking.status === 'rejected') return 'failed';
-  if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'remaining_paid') return 'success';
-  if (booking.paymentStatus === 'deposit_sent' || booking.paymentStatus === 'pending') return 'processing';
-  return 'processing';
+const printInvoice = (b) => {
+  const html = `<html><head><title>Hóa đơn</title><style>body{font-family:Arial;padding:32px}table{width:100%;border-collapse:collapse;margin-top:20px}td,th{padding:10px 0;border-bottom:1px solid #e5e7eb}</style></head><body>
+  <h1>Hóa đơn thanh toán</h1><div>Mã: ${b._id}</div><div>Khách: ${b.userId?.username||b.customerName||'Khách'}</div><div>SĐT: ${b.userId?.phone||b.customerPhone||'—'}</div>
+  <table><tr><th>Thông tin</th><th>Giá trị</th></tr><tr><td>Sân</td><td>${b.courtName||'—'}</td></tr><tr><td>Ngày</td><td>${b.date||'—'}</td></tr><tr><td>Giờ</td><td>${b.hour?b.hour+':00':'—'} (${b.duration||1}h)</td></tr><tr><td><b>Tổng</b></td><td><b>${fmtCurrency(b.total)}</b></td></tr></table>
+  </body></html>`;
+  const w = window.open('', '_blank'); if (!w) return;
+  w.document.write(html); w.document.close(); w.focus(); w.print();
 };
 
-const formatCurrency = (value) => (value || 0).toLocaleString('vi-VN') + ' VNĐ';
-const formatDateTime = (value) => {
-  if (!value) return 'Không rõ';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('vi-VN', { hour12: false });
-};
-
-const getPaymentMethodLabel = (method) => {
-  if (!method) return 'Chưa rõ';
-  const key = method.toLowerCase();
-  if (key.includes('cash') || key.includes('tại sân')) return 'Tiền mặt';
-  if (key.includes('transfer') || key.includes('chuyển khoản')) return 'Chuyển khoản';
-  return method;
-};
-
-const printInvoice = (booking) => {
-  const invoiceHtml = `
-    <html>
-      <head>
-        <title>Hóa đơn ${booking._id || booking.id}</title>
-        <style>
-          body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
-          .wrapper { max-width: 720px; margin: auto; }
-          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-          .badge { padding: 8px 14px; border-radius: 9999px; display: inline-block; font-size: 0.9rem; }
-          .line { height: 1px; background: #e2e8f0; margin: 18px 0; }
-          .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          .table th, .table td { text-align: left; padding: 12px 0; }
-          .table th { color: #4b5563; }
-          .table td { font-weight: 600; }
-          .total-row { font-size: 1.05rem; font-weight: 700; }
-          .footer { margin-top: 32px; color: #6b7280; font-size: 0.95rem; }
-        </style>
-      </head>
-      <body>
-        <div class="wrapper">
-          <div class="header">
-            <div>
-              <h1 style="margin:0;font-size:28px;color:#111827;">Hóa đơn thanh toán</h1>
-              <div style="margin-top:8px;color:#6b7280;">Mã đơn: ${booking._id || booking.id}</div>
-            </div>
-            <div class="badge" style="background:#d1fae5;color:#065f46;">${statusLabels[mapPaymentStatus(booking)].label}</div>
-          </div>
-
-          <div><strong>Khách hàng:</strong> ${booking.userId?.username || booking.customerName || 'Khách'}</div>
-          <div><strong>Email:</strong> ${booking.userId?.email || 'Chưa có'}</div>
-          <div><strong>SĐT:</strong> ${booking.userId?.phone || booking.customerPhone || 'Chưa có'}</div>
-          <div><strong>Thời gian:</strong> ${formatDateTime(booking.createdAt || booking.updatedAt || booking.date)}</div>
-          <div><strong>Phương thức:</strong> ${getPaymentMethodLabel(booking.paymentMethod)}</div>
-
-          <div class="line"></div>
-
-          <table class="table">
-            <tr><th>Thông tin</th><th>Giá trị</th></tr>
-            <tr><td>Mã giao dịch</td><td>${booking._id || booking.id}</td></tr>
-            <tr><td>Sân</td><td>${booking.courtName || 'Không xác định'}</td></tr>
-            <tr><td>Ngày</td><td>${booking.date || 'Không rõ'}</td></tr>
-            <tr><td>Giờ bắt đầu</td><td>${booking.hour ? `${booking.hour}:00` : 'Không rõ'}</td></tr>
-            <tr><td>Thời lượng</td><td>${booking.duration || 1} giờ</td></tr>
-            <tr class="total-row"><td>Tổng tiền</td><td>${formatCurrency(booking.total)}</td></tr>
-          </table>
-
-          <div class="footer">Hóa đơn được tạo bởi Kontum Badminton Management. Vui lòng lưu bản này để đối chiếu.</div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-  printWindow.document.write(invoiceHtml);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-};
-
-export default function AdminPaymentManagement({ bookingRequests = [], refreshBookings }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPaymentId, setSelectedPaymentId] = useState(null);
-
-  const handleApprovePayment = async (id) => {
-    try {
-      await API.put(`/bookings/${id}/payment`, { paymentStatus: 'paid' });
-      if (refreshBookings) refreshBookings();
-    } catch (err) {
-      alert(err.response?.data?.message || "Duyệt thanh toán thất bại!");
-    }
-  };
-
-  const transactions = useMemo(() => {
-    return bookingRequests.map((booking) => ({
-      booking,
-      id: booking._id || booking.id,
-      customer: booking.userId?.username || booking.customerName || 'Khách',
-      amount: booking.total || 0,
-      time: booking.createdAt || booking.updatedAt || booking.date,
-      method: getPaymentMethodLabel(booking.paymentMethod),
-      status: mapPaymentStatus(booking)
-    }));
-  }, [bookingRequests]);
-
-  const filteredTransactions = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return transactions;
-    return transactions.filter((tx) =>
-      String(tx.id).toLowerCase().includes(term) ||
-      String(tx.customer).toLowerCase().includes(term) ||
-      String(tx.method).toLowerCase().includes(term)
-    );
-  }, [transactions, searchTerm]);
-
-  const selectedTransaction = filteredTransactions.find((tx) => tx.id === selectedPaymentId);
-
+function BillModal({ src, onClose }) {
+  if (!src) return null;
   return (
-    <section className="mt-14 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Thanh toán</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Quản lý giao dịch</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-500">Xem lịch sử thanh toán, trạng thái và xuất hóa đơn nhanh.</p>
+    <div onClick={onClose} style={{ position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,.75)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'#fff',borderRadius:20,padding:20,maxWidth:'90vw',maxHeight:'90vh',overflow:'auto',position:'relative' }}>
+        <button onClick={onClose} style={{ position:'absolute',top:10,right:10,background:'#ef4444',color:'#fff',border:'none',borderRadius:'50%',width:30,height:30,cursor:'pointer',fontWeight:900,fontSize:16 }}>✕</button>
+        <div style={{ fontWeight:700,marginBottom:12 }}>🧾 Biên lai thanh toán</div>
+        <img src={src} alt="Biên lai" style={{ maxWidth:480,maxHeight:680,borderRadius:12,display:'block' }} />
+        <div style={{ marginTop:10,textAlign:'center' }}>
+          <a href={src} download="bien-lai.png" style={{ display:'inline-block',background:'#4361ee',color:'#fff',padding:'8px 20px',borderRadius:10,fontWeight:700,textDecoration:'none',fontSize:'0.85rem' }}>⬇ Tải ảnh</a>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm theo mã, khách hàng hoặc phương thức"
-            className="w-full min-w-[280px] rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white"
-          />
-          <button
-            type="button"
-            onClick={() => setSearchTerm('')}
-            className="rounded-3xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Xóa
+      </div>
+    </div>
+  );
+}
+
+function CancelModal({ bookingId, customerName, onConfirm, onClose }) {
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const handleSubmit = async () => {
+    if (!reason.trim()) { alert('Vui lòng nhập lý do hủy!'); return; }
+    setLoading(true);
+    await onConfirm(bookingId, reason.trim());
+    setLoading(false);
+    onClose();
+  };
+  return (
+    <div onClick={onClose} style={{ position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,.55)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'#fff',borderRadius:20,padding:'28px 32px',width:440,maxWidth:'90vw',boxShadow:'0 20px 60px rgba(0,0,0,.2)' }}>
+        <div style={{ fontSize:'1.5rem',marginBottom:8 }}>❌</div>
+        <h3 style={{ margin:'0 0 4px',fontWeight:800,color:'#0f172a' }}>Hủy yêu cầu thanh toán</h3>
+        <p style={{ color:'#64748b',fontSize:'0.85rem',margin:'0 0 18px' }}>
+          Khách hàng <strong style={{ color:'#0f172a' }}>{customerName}</strong> sẽ nhận thông báo với lý do bên dưới.
+        </p>
+        <label style={{ fontWeight:700,fontSize:'0.82rem',color:'#334155',display:'block',marginBottom:6 }}>Lý do từ chối *</label>
+        <textarea
+          value={reason} onChange={e=>setReason(e.target.value)} autoFocus rows={3}
+          placeholder="Ví dụ: Biên lai không hợp lệ, số tiền không khớp, ảnh mờ không rõ..."
+          style={{ width:'100%',border:'1.5px solid #e2e8f0',borderRadius:12,padding:'10px 14px',fontSize:'0.85rem',fontFamily:'inherit',resize:'vertical',outline:'none',boxSizing:'border-box' }}
+          onFocus={e=>e.target.style.borderColor='#ef4444'} onBlur={e=>e.target.style.borderColor='#e2e8f0'}
+        />
+        <div style={{ display:'flex',gap:10,marginTop:18 }}>
+          <button onClick={onClose} style={{ flex:1,background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:10,padding:'10px',fontWeight:700,cursor:'pointer' }}>Quay lại</button>
+          <button onClick={handleSubmit} disabled={loading||!reason.trim()}
+            style={{ flex:1,background:loading||!reason.trim()?'#fca5a5':'linear-gradient(135deg,#ef4444,#b91c1c)',color:'#fff',border:'none',borderRadius:10,padding:'10px',fontWeight:700,cursor:'pointer',boxShadow:'0 4px 12px rgba(239,68,68,.3)' }}>
+            {loading ? '⏳ Đang xử lý...' : '❌ Xác nhận hủy'}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <div className="mt-8 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
-        <div className="hidden overflow-x-auto md:block">
-          <table className="min-w-full text-left text-sm text-slate-700">
-            <thead className="bg-slate-100 text-slate-600">
-              <tr>
-                <th className="px-4 py-4 font-medium">Mã giao dịch</th>
-                <th className="px-4 py-4 font-medium">Khách hàng</th>
-                <th className="px-4 py-4 font-medium">Số tiền</th>
-                <th className="px-4 py-4 font-medium">Thời gian</th>
-                <th className="px-4 py-4 font-medium">Phương thức</th>
-                <th className="px-4 py-4 font-medium">Trạng thái</th>
-                <th className="px-4 py-4 font-medium">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center text-sm text-slate-500">Không tìm thấy giao dịch.</td>
-                </tr>
-              ) : (
-                filteredTransactions.map((tx) => (
-                  <Fragment key={tx.id}>
-                    <tr className="border-t border-slate-200 hover:bg-white">
-                      <td className="px-4 py-4 font-mono text-slate-700">{tx.id}</td>
-                      <td className="px-4 py-4 text-slate-900">{tx.customer}</td>
-                      <td className="px-4 py-4 font-semibold text-slate-900">{formatCurrency(tx.amount)}</td>
-                      <td className="px-4 py-4 text-slate-600">{formatDateTime(tx.time)}</td>
-                      <td className="px-4 py-4 text-slate-600">{tx.method}</td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusLabels[tx.status].badge}`}>
-                          {statusLabels[tx.status].label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {tx.booking.paymentStatus === 'deposit_sent' && (
-                            <button
-                              type="button"
-                              onClick={() => handleApprovePayment(tx.id)}
-                              className="rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                            >
-                              Duyệt thanh toán
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPaymentId(tx.id === selectedPaymentId ? null : tx.id)}
-                            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                          >
-                            {selectedPaymentId === tx.id ? 'Ẩn' : 'Chi tiết'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => printInvoice(tx.booking)}
-                            className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                          >
-                            Xuất PDF
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {selectedPaymentId === tx.id && (
-                      <tr className="bg-slate-50">
-                        <td colSpan="7" className="px-4 py-4 border-t border-slate-200">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-[24px] bg-white p-6 shadow-inner border border-slate-200/60">
-                            <div>
-                              <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-[0.1em]">📋 Chi tiết đặt sân</h4>
-                              <div className="mt-3 space-y-2.5 text-sm text-slate-600">
-                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                                  <span className="text-slate-400">Sân cầu lông:</span>
-                                  <span className="font-semibold text-slate-900">{tx.booking.courtName || 'Không xác định'}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                                  <span className="text-slate-400">Ngày chơi:</span>
-                                  <span className="font-semibold text-slate-900">{tx.booking.date || 'Không rõ'}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                                  <span className="text-slate-400">Khung giờ:</span>
-                                  <span className="font-semibold text-slate-900">{tx.booking.hour ? `${tx.booking.hour}:00` : 'Không rõ'} ({tx.booking.duration || 1} giờ)</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-400">Ghi chú:</span>
-                                  <span className="font-medium text-slate-700 italic">{tx.booking.customerNote || 'Không có ghi chú'}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-[0.1em]">💳 Chi tiết giao dịch</h4>
-                              <div className="mt-3 space-y-2.5 text-sm text-slate-600">
-                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                                  <span className="text-slate-400">Mã đơn đặt:</span>
-                                  <span className="font-mono text-xs font-semibold text-slate-900">{tx.id}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                                  <span className="text-slate-400">Khách hàng:</span>
-                                  <span className="font-semibold text-slate-900">{tx.customer}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                                  <span className="text-slate-400">Số điện thoại:</span>
-                                  <span className="font-semibold text-slate-900">{tx.booking.userId?.phone || tx.booking.customerPhone || 'Chưa có'}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                                  <span className="text-slate-400">Tổng thanh toán:</span>
-                                  <span className="font-bold text-emerald-600">{formatCurrency(tx.amount)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-400">Phương thức:</span>
-                                  <span className="font-semibold text-slate-900">{tx.method}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))
-              )}
-            </tbody>
-          </table>
+function DetailPanel({ b, onApprove, onViewBill, onCancel }) {
+  const st = mapStatus(b);
+  const cfg = STATUS_CFG[st];
+  const customerName = b.userId?.username || b.customerName || 'Khách';
+  const row = (k, v) => (
+    <div key={k} style={{ display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #e2e8f0',fontSize:'0.85rem',alignItems:'center' }}>
+      <span style={{ color:'#64748b' }}>{k}</span>
+      <span style={{ fontWeight:600,color:'#0f172a' }}>{v}</span>
+    </div>
+  );
+  return (
+    <div style={{ background:'#f8faff',borderRadius:16,padding:'18px 20px',marginTop:10,border:'1.5px solid #e0e7ff' }}>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 32px' }}>
+        <div>
+          <div style={{ fontWeight:800,color:'#4361ee',fontSize:'0.75rem',textTransform:'uppercase',marginBottom:8 }}>📋 Chi tiết đặt sân</div>
+          {[['Sân cầu lông',b.courtName||'—'],['Ngày chơi',b.date||'—'],['Khung giờ',b.hour?`${b.hour}:00 (${b.duration||1}h)`:'—'],['Ghi chú',b.customerNote||'Không có']].map(([k,v])=>row(k,v))}
         </div>
-
-        <div className="space-y-4 px-4 py-4 md:hidden">
-          {filteredTransactions.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">Không tìm thấy giao dịch.</div>
-          ) : (
-            filteredTransactions.map((tx) => (
-              <div key={tx.id} className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="font-semibold text-slate-900">{tx.customer}</div>
-                    <div className="mt-1 text-xs text-slate-500">{tx.id}</div>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusLabels[tx.status].badge}`}>{statusLabels[tx.status].label}</span>
-                </div>
-                <div className="mt-4 grid gap-2 text-sm text-slate-600">
-                  <div><span className="font-semibold text-slate-900">Số tiền:</span> {formatCurrency(tx.amount)}</div>
-                  <div><span className="font-semibold text-slate-900">Thời gian:</span> {formatDateTime(tx.time)}</div>
-                  <div><span className="font-semibold text-slate-900">PP thanh toán:</span> {tx.method}</div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {tx.booking.paymentStatus === 'deposit_sent' && (
-                    <button
-                      type="button"
-                      onClick={() => handleApprovePayment(tx.id)}
-                      className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                    >
-                      Duyệt thanh toán
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPaymentId(tx.id === selectedPaymentId ? null : tx.id)}
-                    className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700"
-                  >
-                    {selectedPaymentId === tx.id ? 'Ẩn' : 'Chi tiết'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => printInvoice(tx.booking)}
-                    className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Xuất PDF
-                  </button>
-                </div>
-                {selectedPaymentId === tx.id && (
-                  <div className="mt-4 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
-                    <div><strong>Mã giao dịch:</strong> {tx.id}</div>
-                    <div><strong>Khách hàng:</strong> {tx.customer}</div>
-                    <div><strong>Số tiền:</strong> {formatCurrency(tx.amount)}</div>
-                    <div><strong>Thời gian:</strong> {formatDateTime(tx.time)}</div>
-                    <div><strong>Thanh toán:</strong> {tx.method}</div>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
+        <div>
+          <div style={{ fontWeight:800,color:'#4361ee',fontSize:'0.75rem',textTransform:'uppercase',marginBottom:8 }}>💳 Chi tiết giao dịch</div>
+          {[
+            ['Mã đơn', <span style={{ fontFamily:'monospace',fontSize:'0.78rem' }}>{b._id}</span>],
+            ['Khách hàng', customerName],
+            ['Số điện thoại', b.userId?.phone||b.customerPhone||'—'],
+            ['Tổng tiền', <span style={{ color:'#16a34a',fontWeight:800 }}>{fmtCurrency(b.total)}</span>],
+            ['Phương thức', methodLabel(b.paymentMethod)],
+            ['Trạng thái TT', <span style={{ background:cfg.bg,color:cfg.color,borderRadius:99,padding:'2px 10px',fontWeight:700,fontSize:'0.75rem' }}>{cfg.label}</span>],
+          ].map(([k,v])=>row(k,v))}
         </div>
       </div>
+
+      <div style={{ marginTop:14,paddingTop:12,borderTop:'1.5px solid #e2e8f0',display:'flex',gap:10,flexWrap:'wrap',alignItems:'center' }}>
+        {b.paymentImage ? (
+          <>
+            <img src={b.paymentImage} alt="Biên lai" onClick={()=>onViewBill(b.paymentImage)}
+              style={{ width:80,height:80,objectFit:'cover',borderRadius:10,border:'2px solid #86efac',cursor:'pointer' }} title="Click để xem to" />
+            <div>
+              <div style={{ fontWeight:700,color:'#15803d',fontSize:'0.82rem' }}>✅ Khách đã gửi biên lai</div>
+              <button onClick={()=>onViewBill(b.paymentImage)}
+                style={{ marginTop:6,background:'#4361ee',color:'#fff',border:'none',borderRadius:8,padding:'6px 16px',fontWeight:700,fontSize:'0.8rem',cursor:'pointer' }}>
+                🔍 Xem biên lai đầy đủ
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ color:'#94a3b8',fontSize:'0.82rem',fontStyle:'italic' }}>📎 Chưa có biên lai đính kèm</div>
+        )}
+
+        <div style={{ marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap' }}>
+          {(st === 'bill_sent' || st === 'processing') && (
+            <button onClick={()=>onCancel(b._id||b.id, customerName)}
+              style={{ background:'linear-gradient(135deg,#ef4444,#b91c1c)',color:'#fff',border:'none',borderRadius:10,padding:'8px 18px',fontWeight:700,fontSize:'0.82rem',cursor:'pointer',boxShadow:'0 4px 12px rgba(239,68,68,.25)' }}>
+              ❌ Hủy yêu cầu
+            </button>
+          )}
+          {st === 'bill_sent' && (
+            <button onClick={()=>onApprove(b._id||b.id)}
+              style={{ background:'linear-gradient(135deg,#22c55e,#16a34a)',color:'#fff',border:'none',borderRadius:10,padding:'8px 18px',fontWeight:700,fontSize:'0.82rem',cursor:'pointer',boxShadow:'0 4px 12px rgba(22,163,74,.3)' }}>
+              ✅ Duyệt thanh toán
+            </button>
+          )}
+          <button onClick={()=>printInvoice(b)}
+            style={{ background:'#1e293b',color:'#fff',border:'none',borderRadius:10,padding:'8px 18px',fontWeight:700,fontSize:'0.82rem',cursor:'pointer' }}>
+            🖨 Xuất PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TxRow({ b, expanded, onToggle, onApprove, onViewBill, onCancel }) {
+  const st = mapStatus(b);
+  const cfg = STATUS_CFG[st];
+  const id = b._id || b.id;
+  const customer = b.userId?.username || b.customerName || 'Khách';
+  return (
+    <div style={{ background:'#fff',borderRadius:16,border:`1.5px solid ${expanded?'#4361ee':'#e8ecf6'}`,boxShadow:expanded?'0 0 0 3px rgba(67,97,238,.1)':'0 2px 8px rgba(0,0,0,.04)',overflow:'hidden',transition:'all .15s' }}>
+      <div onClick={onToggle} style={{ display:'grid',gridTemplateColumns:'1fr auto auto auto auto',gap:'10px 14px',padding:'14px 18px',cursor:'pointer',alignItems:'center' }}>
+        <div>
+          <div style={{ fontWeight:700,color:'#0f172a',fontSize:'0.92rem' }}>{customer}</div>
+          <div style={{ fontFamily:'monospace',fontSize:'0.72rem',color:'#94a3b8',marginTop:2 }}>{id}</div>
+          <div style={{ fontSize:'0.78rem',color:'#64748b',marginTop:2 }}>🏸 {b.courtName||'—'} | 📅 {b.date||'—'} | ⏱ {b.hour}:00 ({b.duration||1}h)</div>
+        </div>
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontWeight:800,fontSize:'1rem',color:'#0f172a' }}>{fmtCurrency(b.total)}</div>
+          <div style={{ fontSize:'0.75rem',color:'#64748b' }}>{methodLabel(b.paymentMethod)}</div>
+        </div>
+        {b.paymentImage && (
+          <div onClick={e=>{e.stopPropagation();onViewBill(b.paymentImage);}}
+            style={{ background:'#dbeafe',color:'#1d4ed8',borderRadius:8,padding:'4px 10px',fontSize:'0.72rem',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap' }}>
+            🧾 Biên lai
+          </div>
+        )}
+        <div style={{ background:cfg.bg,color:cfg.color,borderRadius:99,padding:'4px 12px',fontSize:'0.73rem',fontWeight:700,whiteSpace:'nowrap' }}>{cfg.label}</div>
+        <div style={{ color:'#94a3b8',fontSize:'0.75rem',whiteSpace:'nowrap' }}>{expanded?'▲':'▼'}</div>
+      </div>
+      {expanded && (
+        <div style={{ padding:'0 18px 16px' }}>
+          <DetailPanel b={b} onApprove={onApprove} onViewBill={onViewBill} onCancel={onCancel} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AdminPaymentManagement({ bookingRequests = [], refreshBookings }) {
+  const [tab, setTab] = useState('pending');
+  const [filterDate, setFilterDate] = useState('');
+  const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
+  const [billSrc, setBillSrc] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null); // { id, customerName }
+
+  const handleApprove = async (id) => {
+    if (!window.confirm('Xác nhận duyệt thanh toán này?')) return;
+    try {
+      await API.put(`/bookings/${id}/payment`, { paymentStatus: 'paid' });
+      if (refreshBookings) refreshBookings();
+    } catch (err) { alert(err.response?.data?.message || 'Duyệt thất bại!'); }
+  };
+
+  const handleCancel = async (id, reason) => {
+    try {
+      await API.put(`/bookings/${id}/status`, { status: 'rejected', reason });
+      if (refreshBookings) refreshBookings();
+    } catch (err) { alert(err.response?.data?.message || 'Hủy thất bại!'); }
+  };
+
+  const pending = useMemo(() =>
+    bookingRequests.filter(b => b.status === 'approved' && (b.paymentStatus === 'deposit_sent' || b.paymentStatus === 'pending'))
+      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+  , [bookingRequests]);
+
+  const history = useMemo(() => {
+    let list = bookingRequests.filter(b => b.paymentStatus === 'paid' || b.paymentStatus === 'remaining_paid' || b.status === 'rejected');
+    if (filterDate) list = list.filter(b => fmtDate(b.createdAt) === filterDate || b.date === filterDate);
+    if (search.trim()) { const s = search.trim().toLowerCase(); list = list.filter(b => String(b._id).toLowerCase().includes(s) || (b.userId?.username||b.customerName||'').toLowerCase().includes(s) || (b.customerPhone||'').includes(s) || (b.courtName||'').toLowerCase().includes(s)); }
+    return list.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [bookingRequests, filterDate, search]);
+
+  const displayed = tab === 'pending' ? pending : history;
+
+  const stats = useMemo(() => ({
+    pendingCount: pending.length,
+    billCount: pending.filter(b => b.paymentStatus === 'deposit_sent').length,
+    todayPaid: bookingRequests.filter(b => b.paymentStatus === 'paid' && fmtDate(b.updatedAt) === fmtDate(new Date().toISOString())).length,
+    totalPaid: bookingRequests.filter(b => b.paymentStatus === 'paid').reduce((s,b) => s+(b.total||0), 0),
+  }), [pending, bookingRequests]);
+
+  const TABS = [
+    { key:'pending', label:'⏳ Chờ duyệt', count:stats.pendingCount, color:'#f59e0b' },
+    { key:'history', label:'📋 Lịch sử thanh toán', count:history.length, color:'#4361ee' },
+  ];
+
+  return (
+    <section style={{ marginTop:48 }}>
+      <div style={{ marginBottom:24 }}>
+        <div style={{ fontSize:'0.72rem',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.2em',marginBottom:6 }}>Quản lý</div>
+        <h2 style={{ fontSize:'1.6rem',fontWeight:800,color:'#0f172a',margin:0 }}>💳 Quản lý thanh toán</h2>
+        <p style={{ color:'#64748b',marginTop:6,fontSize:'0.88rem' }}>Duyệt biên lai, xem lịch sử và xuất hóa đơn.</p>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:28 }}>
+        {[
+          { icon:'⏳',label:'Chờ duyệt',value:stats.pendingCount,bg:'#fffbeb',color:'#d97706' },
+          { icon:'🧾',label:'Có biên lai',value:stats.billCount,bg:'#dbeafe',color:'#1d4ed8' },
+          { icon:'✅',label:'Duyệt hôm nay',value:stats.todayPaid,bg:'#dcfce7',color:'#16a34a' },
+          { icon:'💰',label:'Tổng đã thu',value:stats.totalPaid?`${Math.round(stats.totalPaid/1000)}k`:'0đ',bg:'#f3e8ff',color:'#7c3aed' },
+        ].map(s => (
+          <div key={s.label} style={{ background:s.bg,borderRadius:16,padding:'14px 18px',border:`1.5px solid ${s.color}22` }}>
+            <div style={{ fontSize:'1.5rem',marginBottom:4 }}>{s.icon}</div>
+            <div style={{ fontSize:'1.4rem',fontWeight:800,color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:'0.74rem',color:'#64748b',fontWeight:600 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display:'flex',gap:8,marginBottom:20 }}>
+        {TABS.map(t => (
+          <button key={t.key} onClick={()=>{setTab(t.key);setExpandedId(null);}}
+            style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 20px',borderRadius:99,border:'1.5px solid',borderColor:tab===t.key?t.color:'#e2e8f0',background:tab===t.key?t.color:'#fff',color:tab===t.key?'#fff':'#64748b',fontWeight:700,fontSize:'0.85rem',cursor:'pointer',transition:'all .15s' }}>
+            {t.label}
+            {t.count > 0 && <span style={{ background:tab===t.key?'rgba(255,255,255,.25)':'#f1f5f9',color:tab===t.key?'#fff':'#475569',borderRadius:99,padding:'1px 7px',fontSize:'0.72rem',fontWeight:800 }}>{t.count}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* History filters */}
+      {tab === 'history' && (
+        <div style={{ display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:8,background:'#f8faff',border:'1.5px solid #c7d2fe',borderRadius:12,padding:'8px 14px' }}>
+            <span style={{ fontSize:'0.8rem',color:'#4361ee',fontWeight:700 }}>📅 Lọc ngày:</span>
+            <input type="date" value={filterDate} onChange={e=>setFilterDate(e.target.value)}
+              style={{ border:'none',background:'transparent',fontWeight:700,color:'#0f172a',fontSize:'0.85rem',outline:'none',cursor:'pointer' }} />
+            {filterDate && <button onClick={()=>setFilterDate('')} style={{ background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontWeight:900 }}>✕</button>}
+          </div>
+          <div style={{ display:'flex',alignItems:'center',gap:8,background:'#f8faff',border:'1.5px solid #c7d2fe',borderRadius:12,padding:'8px 14px',flex:1,minWidth:200 }}>
+            <span style={{ fontSize:'0.8rem',color:'#4361ee',fontWeight:700 }}>🔍</span>
+            <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm theo khách, sân, SĐT, mã đơn..."
+              style={{ border:'none',background:'transparent',fontWeight:600,color:'#0f172a',fontSize:'0.85rem',outline:'none',width:'100%' }} />
+            {search && <button onClick={()=>setSearch('')} style={{ background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontWeight:900 }}>✕</button>}
+          </div>
+          {filterDate && (
+            <div style={{ background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:10,padding:'8px 16px',fontSize:'0.82rem',fontWeight:700,color:'#16a34a' }}>
+              📅 {new Date(filterDate).toLocaleDateString('vi-VN')}: {displayed.length} giao dịch
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bill notice */}
+      {tab === 'pending' && stats.billCount > 0 && (
+        <div style={{ display:'flex',alignItems:'center',gap:10,padding:'12px 18px',background:'#dbeafe',border:'1.5px solid #93c5fd',borderRadius:14,marginBottom:16,fontWeight:700,color:'#1d4ed8',fontSize:'0.88rem' }}>
+          🧾 Có <strong style={{ margin:'0 4px' }}>{stats.billCount}</strong> đơn đã gửi biên lai — cần xem và duyệt!
+        </div>
+      )}
+
+      {/* List */}
+      <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+        {displayed.length === 0 ? (
+          <div style={{ textAlign:'center',padding:'60px 20px',background:'#f8faff',borderRadius:18,border:'1.5px dashed #c7d2fe' }}>
+            <div style={{ fontSize:'2.5rem',marginBottom:12 }}>💳</div>
+            <div style={{ fontWeight:700,color:'#475569' }}>
+              {tab === 'pending' ? 'Không có đơn nào chờ duyệt' : filterDate ? `Không có giao dịch ngày ${new Date(filterDate).toLocaleDateString('vi-VN')}` : 'Chưa có lịch sử thanh toán'}
+            </div>
+          </div>
+        ) : (
+          displayed.map(b => {
+            const id = b._id || b.id;
+            return (
+              <TxRow key={id} b={b} expanded={expandedId===id}
+                onToggle={()=>setExpandedId(expandedId===id?null:id)}
+                onApprove={handleApprove} onViewBill={setBillSrc}
+                onCancel={(bid, name) => setCancelTarget({ id: bid, customerName: name })}
+              />
+            );
+          })
+        )}
+      </div>
+
+      {billSrc && <BillModal src={billSrc} onClose={()=>setBillSrc(null)} />}
+      {cancelTarget && (
+        <CancelModal
+          bookingId={cancelTarget.id}
+          customerName={cancelTarget.customerName}
+          onConfirm={handleCancel}
+          onClose={()=>setCancelTarget(null)}
+        />
+      )}
     </section>
   );
 }

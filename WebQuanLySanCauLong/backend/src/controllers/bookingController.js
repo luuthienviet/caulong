@@ -332,14 +332,30 @@ export const updateBookingStatus = async (req, res, next) => {
 export const updateBookingPayment = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { paymentStatus, paymentMethod, paymentReceived } = req.body;
+    const { paymentStatus, paymentMethod, paymentReceived, paymentImage } = req.body;
     const updateData = {};
     if (paymentStatus) updateData.paymentStatus = paymentStatus;
     if (paymentMethod) updateData.paymentMethod = paymentMethod;
     if (paymentReceived != null) updateData.paymentReceived = paymentReceived;
+    if (paymentImage) updateData.paymentImage = paymentImage;
 
     const booking = await Booking.findByIdAndUpdate(id, updateData, { new: true }).populate('userId', 'username name email phone');
     if (!booking) return res.status(404).json({ message: "Không tìm thấy" });
+
+    // Thông báo cho admin khi khách gửi biên lai
+    if (paymentImage) {
+      const admin = await User.findOne({ role: 'admin' });
+      if (admin) {
+        const Notification = (await import('../models/Notification.js')).default;
+        await Notification.create({
+          userId: admin._id,
+          bookingId: booking._id,
+          message: `💳 Khách ${booking.customerName || 'hàng'} đã gửi biên lai thanh toán cho đơn #${booking._id}. Vui lòng xác nhận.`,
+          type: 'payment_received'
+        });
+      }
+    }
+
     res.status(200).json({ success: true, data: booking });
   } catch (error) { next(error); }
 };
@@ -363,24 +379,49 @@ export const deleteBooking = async (req, res, next) => {
 export const customerPayBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { paymentImage, paymentMethod } = req.body;
+
     const booking = await Booking.findById(id);
     if (!booking) return res.status(404).json({ message: "Không tìm thấy đơn đặt sân" });
-    
+
     // Đảm bảo đúng user sở hữu booking này
     if (booking.userId.toString() !== req.user.id) {
       return res.status(403).json({ message: "Không có quyền thanh toán đơn này" });
     }
-    
+
     // Đảm bảo đơn đã được duyệt sân trước
     if (booking.status !== 'approved') {
       return res.status(400).json({ message: "Đơn đặt sân chưa được duyệt bởi admin" });
     }
-    
-    // Cập nhật trạng thái thanh toán sang 'deposit_sent' và phương thức thanh toán sang 'transfer' (Chuyển khoản)
+
+    // Cập nhật trạng thái thanh toán
     booking.paymentStatus = 'deposit_sent';
-    booking.paymentMethod = 'transfer';
+    booking.paymentMethod = paymentMethod || 'chuyển khoản';
+
+    // ✅ Lưu ảnh biên lai nếu có
+    if (paymentImage) {
+      booking.paymentImage = paymentImage;
+    }
+
     await booking.save();
-    
+
+    // Thông báo admin có biên lai mới
+    if (paymentImage) {
+      try {
+        const admin = await User.findOne({ role: 'admin' });
+        if (admin) {
+          await Notification.create({
+            userId: admin._id,
+            bookingId: booking._id,
+            message: `🧾 Khách ${booking.customerName || req.user.username || 'hàng'} đã gửi biên lai thanh toán cho đơn #${booking._id}. Vui lòng xác nhận.`,
+            type: 'payment_received'
+          });
+        }
+      } catch (notifErr) {
+        console.error('Notification error:', notifErr);
+      }
+    }
+
     res.status(200).json({ success: true, message: "Gửi yêu cầu thanh toán thành công!", data: booking });
   } catch (error) { next(error); }
 };
