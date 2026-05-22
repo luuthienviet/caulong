@@ -751,7 +751,7 @@ export default function AdminBookingRequests({
                       onClick={() => window.open(showDetailModal.paymentImage)}
                     />
                     <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-semibold cursor-pointer" onClick={() => window.open(showDetailModal.paymentImage)}>
-                      Bấm để phóng to biên lai 🔍
+                      Bấm để phóng to ảnh bill 🔍
                     </div>
                   </div>
                 </div>

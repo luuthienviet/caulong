@@ -8,7 +8,7 @@ const methodLabel = (m) => { if (!m) return 'Chưa rõ'; const l = m.toLowerCase
 const mapStatus = (b) => { if (b.status === 'rejected') return 'failed'; if (b.paymentStatus === 'paid' || b.paymentStatus === 'remaining_paid') return 'success'; if (b.paymentStatus === 'deposit_sent') return 'bill_sent'; return 'processing'; };
 const STATUS_CFG = {
   success:    { label: 'Đã thanh toán', bg: '#dcfce7', color: '#15803d' },
-  bill_sent:  { label: 'Có biên lai',   bg: '#dbeafe', color: '#1d4ed8' },
+  bill_sent:  { label: 'Có ảnh bill',   bg: '#dbeafe', color: '#1d4ed8' },
   processing: { label: 'Chờ xử lý',    bg: '#fef9c3', color: '#a16207' },
   failed:     { label: 'Thất bại',      bg: '#fee2e2', color: '#b91c1c' },
 };
@@ -28,10 +28,10 @@ function BillModal({ src, onClose }) {
     <div onClick={onClose} style={{ position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,.75)',display:'flex',alignItems:'center',justifyContent:'center' }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:'#fff',borderRadius:20,padding:20,maxWidth:'90vw',maxHeight:'90vh',overflow:'auto',position:'relative' }}>
         <button onClick={onClose} style={{ position:'absolute',top:10,right:10,background:'#ef4444',color:'#fff',border:'none',borderRadius:'50%',width:30,height:30,cursor:'pointer',fontWeight:900,fontSize:16 }}>✕</button>
-        <div style={{ fontWeight:700,marginBottom:12 }}>🧾 Biên lai thanh toán</div>
-        <img src={src} alt="Biên lai" style={{ maxWidth:480,maxHeight:680,borderRadius:12,display:'block' }} />
+        <div style={{ fontWeight:700,marginBottom:12 }}>🧾 Ảnh bill thanh toán</div>
+        <img src={src} alt="Ảnh bill" style={{ maxWidth:480,maxHeight:680,borderRadius:12,display:'block' }} />
         <div style={{ marginTop:10,textAlign:'center' }}>
-          <a href={src} download="bien-lai.png" style={{ display:'inline-block',background:'#4361ee',color:'#fff',padding:'8px 20px',borderRadius:10,fontWeight:700,textDecoration:'none',fontSize:'0.85rem' }}>⬇ Tải ảnh</a>
+          <a href={src} download="anh-bill.png" style={{ display:'inline-block',background:'#4361ee',color:'#fff',padding:'8px 20px',borderRadius:10,fontWeight:700,textDecoration:'none',fontSize:'0.85rem' }}>⬇ Tải ảnh</a>
         </div>
       </div>
     </div>
@@ -59,7 +59,7 @@ function CancelModal({ bookingId, customerName, onConfirm, onClose }) {
         <label style={{ fontWeight:700,fontSize:'0.82rem',color:'#334155',display:'block',marginBottom:6 }}>Lý do từ chối *</label>
         <textarea
           value={reason} onChange={e=>setReason(e.target.value)} autoFocus rows={3}
-          placeholder="Ví dụ: Biên lai không hợp lệ, số tiền không khớp, ảnh mờ không rõ..."
+          placeholder="Ví dụ: Ảnh bill không hợp lệ, số tiền không khớp, ảnh mờ không rõ..."
           style={{ width:'100%',border:'1.5px solid #e2e8f0',borderRadius:12,padding:'10px 14px',fontSize:'0.85rem',fontFamily:'inherit',resize:'vertical',outline:'none',boxSizing:'border-box' }}
           onFocus={e=>e.target.style.borderColor='#ef4444'} onBlur={e=>e.target.style.borderColor='#e2e8f0'}
         />
@@ -108,18 +108,18 @@ function DetailPanel({ b, onApprove, onViewBill, onCancel }) {
       <div style={{ marginTop:14,paddingTop:12,borderTop:'1.5px solid #e2e8f0',display:'flex',gap:10,flexWrap:'wrap',alignItems:'center' }}>
         {b.paymentImage ? (
           <>
-            <img src={b.paymentImage} alt="Biên lai" onClick={()=>onViewBill(b.paymentImage)}
+            <img src={b.paymentImage} alt="Ảnh bill" onClick={()=>onViewBill(b.paymentImage)}
               style={{ width:80,height:80,objectFit:'cover',borderRadius:10,border:'2px solid #86efac',cursor:'pointer' }} title="Click để xem to" />
             <div>
-              <div style={{ fontWeight:700,color:'#15803d',fontSize:'0.82rem' }}>✅ Khách đã gửi biên lai</div>
+              <div style={{ fontWeight:700,color:'#15803d',fontSize:'0.82rem' }}>✅ Khách đã gửi ảnh bill</div>
               <button onClick={()=>onViewBill(b.paymentImage)}
                 style={{ marginTop:6,background:'#4361ee',color:'#fff',border:'none',borderRadius:8,padding:'6px 16px',fontWeight:700,fontSize:'0.8rem',cursor:'pointer' }}>
-                🔍 Xem biên lai đầy đủ
+                🔍 Xem ảnh bill đầy đủ
               </button>
             </div>
           </>
         ) : (
-          <div style={{ color:'#94a3b8',fontSize:'0.82rem',fontStyle:'italic' }}>📎 Chưa có biên lai đính kèm</div>
+          <div style={{ color:'#94a3b8',fontSize:'0.82rem',fontStyle:'italic' }}>📎 Chưa có ảnh bill đính kèm</div>
         )}
 
         <div style={{ marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap' }}>
@@ -165,7 +165,7 @@ function TxRow({ b, expanded, onToggle, onApprove, onViewBill, onCancel }) {
         {b.paymentImage && (
           <div onClick={e=>{e.stopPropagation();onViewBill(b.paymentImage);}}
             style={{ background:'#dbeafe',color:'#1d4ed8',borderRadius:8,padding:'4px 10px',fontSize:'0.72rem',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap' }}>
-            🧾 Biên lai
+            🧾 Ảnh bill
           </div>
         )}
         <div style={{ background:cfg.bg,color:cfg.color,borderRadius:99,padding:'4px 12px',fontSize:'0.73rem',fontWeight:700,whiteSpace:'nowrap' }}>{cfg.label}</div>
@@ -234,14 +234,14 @@ export default function AdminPaymentManagement({ bookingRequests = [], refreshBo
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:'0.72rem',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.2em',marginBottom:6 }}>Quản lý</div>
         <h2 style={{ fontSize:'1.6rem',fontWeight:800,color:'#0f172a',margin:0 }}>💳 Quản lý thanh toán</h2>
-        <p style={{ color:'#64748b',marginTop:6,fontSize:'0.88rem' }}>Duyệt biên lai, xem lịch sử và xuất hóa đơn.</p>
+        <p style={{ color:'#64748b',marginTop:6,fontSize:'0.88rem' }}>Duyệt ảnh bill, xem lịch sử và xuất hóa đơn.</p>
       </div>
 
       {/* Stats */}
       <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:28 }}>
         {[
           { icon:'⏳',label:'Chờ duyệt',value:stats.pendingCount,bg:'#fffbeb',color:'#d97706' },
-          { icon:'🧾',label:'Có biên lai',value:stats.billCount,bg:'#dbeafe',color:'#1d4ed8' },
+          { icon:'🧾',label:'Có ảnh bill',value:stats.billCount,bg:'#dbeafe',color:'#1d4ed8' },
           { icon:'✅',label:'Duyệt hôm nay',value:stats.todayPaid,bg:'#dcfce7',color:'#16a34a' },
           { icon:'💰',label:'Tổng đã thu',value:stats.totalPaid?`${Math.round(stats.totalPaid/1000)}k`:'0đ',bg:'#f3e8ff',color:'#7c3aed' },
         ].map(s => (
@@ -290,7 +290,7 @@ export default function AdminPaymentManagement({ bookingRequests = [], refreshBo
       {/* Bill notice */}
       {tab === 'pending' && stats.billCount > 0 && (
         <div style={{ display:'flex',alignItems:'center',gap:10,padding:'12px 18px',background:'#dbeafe',border:'1.5px solid #93c5fd',borderRadius:14,marginBottom:16,fontWeight:700,color:'#1d4ed8',fontSize:'0.88rem' }}>
-          🧾 Có <strong style={{ margin:'0 4px' }}>{stats.billCount}</strong> đơn đã gửi biên lai — cần xem và duyệt!
+          🧾 Có <strong style={{ margin:'0 4px' }}>{stats.billCount}</strong> đơn đã gửi ảnh bill — cần xem và duyệt!
         </div>
       )}
 
