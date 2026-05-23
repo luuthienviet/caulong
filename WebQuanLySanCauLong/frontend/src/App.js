@@ -703,21 +703,58 @@ function App() {
     return () => clearInterval(interval);
   }, [isUser, userBookings, userNotifications]);
 
-  // === RENDER HERO ===
   const renderHero = () => (
-    <section className="hero-slider">
-      {bannerData.map((slide, index) => (
-        <div className={`slide-item ${index === currentSlide ? 'active' : ''}`} key={index}
-          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url(${slide.image})` }}>
-          <div className="hero-overlay">
-            <h1 style={{ color: '#fff' }} dangerouslySetInnerHTML={{ __html: slide.title }}></h1>
-            <p style={{ color: '#eee', fontSize: '1.2rem' }}>{slide.desc}</p>
-            <button className="btn-primary pulse">ĐẶT SÂN NGAY</button>
-          </div>
-        </div>
-      ))}
-      <button className="slide-arrow prev" onClick={() => setCurrentSlide(prev => prev === 0 ? bannerData.length - 1 : prev - 1)}>&#10094;</button>
-      <button className="slide-arrow next" onClick={() => setCurrentSlide(prev => prev === bannerData.length - 1 ? 0 : prev + 1)}>&#10095;</button>
+    <section className="hero-slider" style={{ position: 'relative', overflow: 'hidden', height: '75vh', minHeight: '550px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', backgroundColor: '#1a1a2e' }}>
+      <video 
+        autoPlay 
+        loop 
+        muted 
+        playsInline 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center 45%', // Canh ngay vị trí thân người chơi
+          zIndex: 0
+        }}
+      >
+        {/* Placeholder video link or local file */}
+        <source src="/banner-video.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      <div className="hero-overlay" style={{ 
+        position: 'absolute', 
+        top: 0, left: 0, right: 0, bottom: 0, 
+        zIndex: 1, 
+        backgroundColor: 'rgba(0, 0, 0, 0.45)', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        padding: '0 20px',
+        width: '100%',
+        maxWidth: '100%'
+      }}>
+        <h1 style={{ color: '#fff', textAlign: 'center', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, textShadow: '2px 4px 10px rgba(0,0,0,0.5)', margin: 0, letterSpacing: '2px' }}>
+          LTV <span style={{ color: '#4cc9f0' }}>BADMINTON</span>
+        </h1>
+        <p style={{ color: '#f8f9fa', fontSize: 'clamp(1rem, 2vw, 1.4rem)', textAlign: 'center', maxWidth: '800px', margin: '20px 0 40px 0', textShadow: '1px 2px 4px rgba(0,0,0,0.5)', fontWeight: 500 }}>
+          Hệ thống sân cầu lông đạt chuẩn quốc gia. Trải nghiệm không gian thể thao đẳng cấp và chuyên nghiệp ngay hôm nay.
+        </p>
+        <button 
+          className="btn-primary pulse" 
+          onClick={() => {
+            const courtSection = document.querySelector('.court-section');
+            if (courtSection) courtSection.scrollIntoView({ behavior: 'smooth' });
+          }}
+          style={{ padding: '16px 40px', fontSize: '1.2rem', borderRadius: '50px', fontWeight: 'bold' }}
+        >
+          ĐẶT SÂN NGAY
+        </button>
+      </div>
     </section>
   );
 
