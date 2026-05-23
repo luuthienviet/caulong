@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import API from '../../api';
 import { AuthContext } from '../../AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function Login({ setPage, setAuthMode }) {
   const { login } = useContext(AuthContext);
@@ -39,6 +40,25 @@ export default function Login({ setPage, setAuthMode }) {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    try {
+      const res = await API.post('/auth/google', { token: credentialResponse.credential });
+      const { token, user } = res.data;
+      localStorage.setItem('token', token);
+      login(user);
+      setPage('home');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Đăng nhập Google thất bại');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleFailure = () => {
+    alert('Đăng nhập Google thất bại');
+  };
+
   return (
     <form onSubmit={handleSubmit} className="auth-actual-form">
       <h2 style={{ color: '#00a651' }}>CHÀO MỪNG TRỞ LẠI</h2>
@@ -62,6 +82,13 @@ export default function Login({ setPage, setAuthMode }) {
       <button type="submit" className="btn-auth-submit" disabled={loading}>
         {loading ? 'Đang xử lý...' : 'ĐĂNG NHẬP NGAY'}
       </button>
+
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleFailure}
+        />
+      </div>
       <p className="auth-switch">
         Chưa có tài khoản? <span onClick={() => setAuthMode('register')}>Đăng ký miễn phí</span>
       </p>

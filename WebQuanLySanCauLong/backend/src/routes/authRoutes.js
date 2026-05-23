@@ -12,7 +12,8 @@ import {
   createStaff,
   updateStaff,
   deleteStaff,
-  getMe
+  getMe,
+  googleLogin
 } from "../controllers/authController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
@@ -21,6 +22,7 @@ const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/google", googleLogin);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/users", authMiddleware, adminMiddleware, getUsers);

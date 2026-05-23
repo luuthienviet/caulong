@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { sendEmail } from "../utils/emailService.js";
+import { OAuth2Client } from 'google-auth-library';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "898009698721-8acjsnk6gmpr4nksd2vsk63hga1krqbl.apps.googleusercontent.com");
 
 export const register = async (req, res, next) => {
   try {
@@ -27,6 +30,39 @@ export const login = async (req, res, next) => {
     const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET || '123456', { expiresIn: "7d" });
     res.json({ token, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '', isLocked: user.isLocked, points: user.points || 0 } });
   } catch (error) { next(error); }
+};
+
+export const googleLogin = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID || "898009698721-8acjsnk6gmpr4nksd2vsk63hga1krqbl.apps.googleusercontent.com",
+    });
+    const payload = ticket.getPayload();
+    const { email, name, sub: googleId } = payload;
+    
+    let user = await User.findOne({ email });
+    if (!user) {
+      const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+      user = new User({
+        username,
+        name,
+        email,
+        password: await bcrypt.hash(googleId, 10),
+        role: 'user',
+      });
+      await user.save();
+    }
+    
+    if (user.isLocked) return res.status(403).json({ message: "Tài khoản này đã bị khóa" });
+    
+    const jwtToken = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET || '123456', { expiresIn: "7d" });
+    res.json({ token: jwtToken, user: { id: user._id, username: user.username, name: user.name || '', role: user.role, email: user.email || '', phone: user.phone || '', isLocked: user.isLocked, points: user.points || 0 } });
+  } catch (error) {
+    console.error("Google login error:", error);
+    res.status(400).json({ message: "Đăng nhập Google thất bại" });
+  }
 };
 
 export const forgotPassword = async (req, res, next) => {
