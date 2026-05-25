@@ -32,6 +32,7 @@ export default function UtilityShop({ user }) {
   const [customerName, setCustomerName] = useState(user?.name || user?.username || '');
   const [customerPhone, setCustomerPhone] = useState(user?.phone || '');
   const [customerNote, setCustomerNote] = useState('');
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const categories = ["Nước uống", "Đồ ăn", "Thuê dụng cụ", "Phụ kiện"];
 
@@ -167,6 +168,11 @@ export default function UtilityShop({ user }) {
     e.preventDefault();
     if (cart.length === 0) return;
 
+    setIsPlacingOrder(true);
+    
+    // Giả lập thời gian chờ xử lý thanh toán 1.5 giây
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     try {
       // Cập nhật tồn kho thật lên Database!
       for (const item of cart) {
@@ -202,6 +208,7 @@ export default function UtilityShop({ user }) {
     }
 
     setCart([]);
+    setIsPlacingOrder(false);
     setCheckoutOpen(false);
     setOrderSuccess(true);
   };
@@ -831,30 +838,35 @@ export default function UtilityShop({ user }) {
                   marginBottom: '14px'
                 }}>
                   <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`2563eb-Pay-LTV-Shop-${cartTotal}`)}`} 
-                    alt="momo qr code" 
-                    style={{ width: '150px', height: '150px', display: 'block' }}
+                    src={`https://img.vietqr.io/image/970436-0123456789-compact2.png?amount=${cartTotal}&addInfo=${encodeURIComponent(`THANHTOAN_SHOP_${customerPhone || ''}`)}&accountName=${encodeURIComponent('LUU THIEN VIET')}`} 
+                    alt="qr chuyển khoản" 
+                    style={{ width: '150px', height: '150px', display: 'block', borderRadius: '12px' }}
+                    onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }}
                   />
+                  <div style={{ display:'none', color:'#ef4444', fontSize:'0.82rem', marginTop:8, textAlign: 'center' }}>
+                    Không tải được QR, vui lòng xem thông tin bên dưới
+                  </div>
                 </div>
 
                 <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                  <p style={{ margin: '0 0 2px 0', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Tài khoản: **LTV BADMINTON GROUP**</p>
+                  <p style={{ margin: '0 0 2px 0', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Vietcombank • 0123456789 • LUU THIEN VIET</p>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#ef4444', fontWeight: 800 }}>Số tiền: {cartTotal.toLocaleString('vi-VN')} đ</p>
                 </div>
 
                 <button 
                   type="submit"
+                  disabled={isPlacingOrder}
                   style={{
                     width: '100%',
-                    backgroundColor: '#10b981',
+                    backgroundColor: isPlacingOrder ? '#94a3b8' : '#10b981',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '16px',
                     padding: '12px',
                     fontSize: '0.9rem',
                     fontWeight: 800,
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                    cursor: isPlacingOrder ? 'not-allowed' : 'pointer',
+                    boxShadow: isPlacingOrder ? 'none' : '0 4px 14px rgba(16, 185, 129, 0.3)',
                     transition: 'all 0.2s',
                     display: 'flex',
                     alignItems: 'center',
@@ -862,10 +874,22 @@ export default function UtilityShop({ user }) {
                     gap: '6px'
                   }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                  Xác Nhận Đã Thanh Toán
+                  {isPlacingOrder ? (
+                    <>
+                      <div style={{
+                        width: '18px', height: '18px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                      Đang xử lý thanh toán...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Xác Nhận Đã Thanh Toán
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -972,6 +996,11 @@ export default function UtilityShop({ user }) {
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         @keyframes slideLeft {
