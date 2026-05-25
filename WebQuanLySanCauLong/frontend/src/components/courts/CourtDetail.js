@@ -450,6 +450,14 @@ export default function CourtDetail({
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
   useEffect(() => {
+    if (selectedDate && selectedDate < today) {
+      setSelectedDate('');
+      setSelectedHour('');
+      setDuration(1);
+    }
+  }, [selectedDate, today, setSelectedDate, setSelectedHour, setDuration]);
+
+  useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', fn);
     return () => window.removeEventListener('resize', fn);
@@ -760,7 +768,7 @@ export default function CourtDetail({
                       {hours.map((hour, index) => {
                         const status = getSlotStatus(hour);
                         const meta = slotMeta[status];
-                        const inSel = selectionRange.start != null && index >= selectionRange.start && index <= selectionRange.end;
+                        const inSel = selectionRange.start != null && index >= selectionRange.start && index <= selectionRange.end && meta.ok;
                         const isEve = Number(hour) >= 17;
                         return (
                           <button key={hour} type="button" disabled={!meta.ok}
@@ -1114,7 +1122,7 @@ export default function CourtDetail({
               {hours.map((hour, index) => {
                 const status = getSlotStatus(hour);
                 const meta = slotMeta[status];
-                const inSel = selectionRange.start != null && index >= selectionRange.start && index <= selectionRange.end;
+                const inSel = selectionRange.start != null && index >= selectionRange.start && index <= selectionRange.end && meta.ok;
                 const isEve = Number(hour) >= 17;
                 return (
                   <button key={hour} type="button" disabled={!meta.ok}
