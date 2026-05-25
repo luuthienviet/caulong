@@ -446,7 +446,8 @@ export default function CourtDetail({
   const [isRedeemingPoints, setIsRedeemingPoints] = useState(false);
 
   const hours = ['05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'];
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth <= 768);
@@ -474,7 +475,8 @@ export default function CourtDetail({
 
   /* ── helpers ── */
   const getSlotStatus = (hour) => {
-    if (selectedDate === today && Number(hour) < new Date().getHours()) return 'past';
+    if (selectedDate < today) return 'past';
+    if (selectedDate === today && Number(hour) <= new Date().getHours()) return 'past';
     const h = parseInt(hour, 10);
     const b = bookingRequests.find(
       r => {
