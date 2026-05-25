@@ -121,7 +121,7 @@ export default function ScheduleViewer({
     };
 
     try {
-      await API.post('/bookings', newBooking);
+      await API.post('/bookings/admin-booking', newBooking);
       alert('🎉 Đặt sân trực tiếp thành công!');
       setQuickBookName('');
       setQuickBookPhone('');

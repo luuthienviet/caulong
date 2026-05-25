@@ -111,8 +111,20 @@ export default function AdminBookingRequests({
     });
   };
 
-  const getSlotStyle = (booking) => {
-    if (!booking) return { bg: "bg-white hover:bg-emerald-50/50 border-slate-100 text-slate-400", label: "", clickable: true };
+  const getSlotStyle = (booking, hourStr, dateStr) => {
+    let isPast = false;
+    const now = new Date();
+    const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const currentHour = now.getHours();
+
+    if (dateStr < todayStr) isPast = true;
+    if (dateStr === todayStr && Number(hourStr) < currentHour) isPast = true;
+
+    if (!booking) {
+      if (isPast) return { bg: "bg-slate-50 border-slate-200 text-slate-300", label: "Đã qua", clickable: false, isPast: true };
+      return { bg: "bg-white hover:bg-emerald-50/50 border-slate-100 text-slate-400", label: "", clickable: true };
+    }
+    
     if (booking.status === "pending") return { bg: "bg-amber-50 border-l-4 border-l-amber-500 border-t-slate-150 border-b-slate-150 border-r-slate-150 text-amber-800", label: "Chờ duyệt", clickable: false };
     if (booking.status === "approved") {
       if (isExpired(booking)) return { bg: "bg-slate-50 border-l-4 border-l-slate-400 border-t-slate-150 border-b-slate-150 border-r-slate-150 text-slate-500", label: "Đã hoàn thành", clickable: false };
@@ -578,7 +590,7 @@ export default function AdminBookingRequests({
                       {/* Court Slots */}
                       {safeCourts.map((court) => {
                         const booking = getSlotBooking(court, hour);
-                        const style = getSlotStyle(booking);
+                        const style = getSlotStyle(booking, hour, date);
                         const isSelected =
                           quickBooking &&
                           String(quickBooking.court.id) === String(court.id) &&
@@ -622,6 +634,12 @@ export default function AdminBookingRequests({
                               <div className="w-full h-full min-h-[55px] p-2.5 rounded-2xl bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center gap-1 shadow-md scale-102 shadow-blue-200 animate-in zoom-in-95 duration-100">
                                 <Check size={12} className="stroke-[3]" />
                                 ĐANG CHỌN
+                              </div>
+                            ) : style.isPast ? (
+                              <div className="w-full h-full min-h-[55px] rounded-2xl flex items-center justify-center transition-all duration-150">
+                                <span className="text-[10px] uppercase font-extrabold text-slate-300 opacity-60">
+                                  ĐÃ QUA
+                                </span>
                               </div>
                             ) : (
                               // Clean, silent empty cell (no text at all). Displays a delicate, round plus badge on hover that never overflows narrow columns!
