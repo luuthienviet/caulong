@@ -5,8 +5,8 @@ const initialServices = [
   { id: 1, name: "Revive Chanh Muối 500ml", category: "Nước uống", price: 15000, stock: 150, desc: "Nước bù khoáng Revive hương chanh muối giúp tiếp thêm sinh lực tức thì.", image: "https://images.unsplash.com/photo-1556881286-fc6915169721?w=500&auto=format&fit=crop&q=80" },
   { id: 2, name: "Nước suối Aquafina 500ml", category: "Nước uống", price: 8000, stock: 220, desc: "Nước uống đóng chai tinh khiết Aquafina tốt cho sức khỏe.", image: "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=500&auto=format&fit=crop&q=80" },
   { id: 3, name: "Thuê vợt Yonex Astrox 99", category: "Thuê dụng cụ", price: 50000, stock: 10, desc: "Vợt Yonex Astrox 99 cao cấp dành cho người chơi tấn công mạnh mẽ.", image: "https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=500&auto=format&fit=crop&q=80" },
-  { id: 4, name: "Thuê giày Victor Auraspeed", category: "Thuê dụng cụ", price: 40000, stock: 8, desc: "Giày cầu lông Victor êm ái, bám sân cực tốt đầy đủ size.", image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=500&auto=format&fit=crop&q=80" },
-  { id: 5, name: "Hộp cầu lông Thành Công", category: "Phụ kiện", price: 230000, stock: 45, desc: "Hộp 12 quả cầu lông Thành Công chuẩn thi đấu câu lạc bộ.", image: "https://images.unsplash.com/photo-1613918108466-292b78a8ef95?w=500&auto=format&fit=crop&q=80" },
+  { id: 4, name: "Thuê giày thể thao cao cấp", category: "Thuê dụng cụ", price: 40000, stock: 8, desc: "Giày thể thao êm ái, bám sân cực tốt đầy đủ size.", image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=500&auto=format&fit=crop&q=80" },
+  { id: 5, name: "Hộp bóng/cầu thi đấu", category: "Phụ kiện", price: 230000, stock: 45, desc: "Hộp phụ kiện chuẩn thi đấu câu lạc bộ.", image: "https://images.unsplash.com/photo-1613918108466-292b78a8ef95?w=500&auto=format&fit=crop&q=80" },
   { id: 6, name: "Cuốn cán vợt Yonex chống trơn", category: "Phụ kiện", price: 20000, stock: 120, desc: "Cuốn cán vợt cao su non giúp cầm vợt êm tay và thấm hút mồ hôi.", image: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=500&auto=format&fit=crop&q=80" },
   { id: 7, name: "Bánh mì xúc xích kẹp phô mai", category: "Đồ ăn", price: 25000, stock: 0, desc: "Bánh mì nướng nóng hổi ăn nhẹ phục hồi năng lượng giữa các set đấu.", image: "https://images.unsplash.com/photo-1541214113241-21578d2d9b62?w=500&auto=format&fit=crop&q=80" }
 ];
@@ -257,7 +257,7 @@ export default function UtilityShop({ user }) {
             🛒 LTV SPORT SHOP
           </span>
           <h2 style={{ fontSize: '2.2rem', fontWeight: 800, margin: '16px 0 8px 0', color: '#fff' }}>
-            Cửa Hàng Tiện Ích Cầu Lông
+            Cửa Hàng Tiện Ích Thể Thao
           </h2>
           <p style={{ margin: 0, color: '#94a3b8', fontSize: '1rem', maxWidth: '600px', lineHeight: '1.6' }}>
             Cung cấp nước giải khát, đồ ăn nhẹ phục hồi năng lượng, dịch vụ thuê vợt/giày cao cấp chuẩn thi đấu và các phụ kiện chính hãng.
@@ -838,18 +838,14 @@ export default function UtilityShop({ user }) {
                   marginBottom: '14px'
                 }}>
                   <img 
-                    src={`https://img.vietqr.io/image/970436-0123456789-compact2.png?amount=${cartTotal}&addInfo=${encodeURIComponent(`THANHTOAN_SHOP_${customerPhone || ''}`)}&accountName=${encodeURIComponent('LUU THIEN VIET')}`} 
-                    alt="qr chuyển khoản" 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent('00020101021138620010A00000072701320006970454011899MM24170M266382310208QRIBFTTA53037045802VN62190515MOMOW2W2663823163042359')}`}
+                    alt="QR MoMo" 
                     style={{ width: '150px', height: '150px', display: 'block', borderRadius: '12px' }}
-                    onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }}
                   />
-                  <div style={{ display:'none', color:'#ef4444', fontSize:'0.82rem', marginTop:8, textAlign: 'center' }}>
-                    Không tải được QR, vui lòng xem thông tin bên dưới
-                  </div>
                 </div>
 
                 <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                  <p style={{ margin: '0 0 2px 0', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Vietcombank • 0123456789 • LUU THIEN VIET</p>
+                  <p style={{ margin: '0 0 2px 0', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>MoMo • LUU THIEN VIET</p>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#ef4444', fontWeight: 800 }}>Số tiền: {cartTotal.toLocaleString('vi-VN')} đ</p>
                 </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import AdminLoginPage from "./pages/Adminloginpage";
 import { AuthContext } from './AuthContext';
 import AdminDashboardModern from "./pages/AdminDashboardModern";
@@ -8,6 +8,7 @@ import ScheduleViewer from "./components/courts/ScheduleViewer";
 import API from './api';
 import './App.css';
 import './styles/dashboard.css';
+import CustomSelect from './components/common/CustomSelect';
 
 const defaultCourts = [
   { id: 1, name: "SÂN SỐ 01 - VIP", price: 200000, desc: "Sân VIP, thảm Yonex cao cấp, ánh sáng chuẩn thi đấu.", status: "Trống", image: "https://www.alobo.vn/wp-content/uploads/2025/08/image-108.png" },
@@ -27,7 +28,9 @@ const formatCourtData = (items) => {
       price: typeof c.price === 'number' ? c.price : Number(c.price) || 0,
       desc: typeof c.description === 'string' ? c.description : (typeof c.desc === 'string' ? c.desc : ''),
       status: typeof c.status === 'string' ? c.status : 'Trống',
-      image: typeof c.image === 'string' ? c.image : ''
+      image: typeof c.image === 'string' ? c.image : '',
+      sport: c.sport || 'badminton',
+      branch: c.branch || 'kt'
     }))
     .filter((court) => {
       const key = court.id || court.name;
@@ -73,6 +76,53 @@ function App() {
   const [showCourtModal, setShowCourtModal] = useState(false);
   const [editingCourt, setEditingCourt] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const [courtSportFilter, setCourtSportFilter] = useState("all");
+  const [courtBranchFilter, setCourtBranchFilter] = useState("all");
+
+  const [dbSports, setDbSports] = useState([]);
+
+  useEffect(() => {
+    API.get('/sports')
+      .then(res => setDbSports(res.data))
+      .catch(err => console.error('Error fetching sports:', err));
+  }, [page]); // Re-fetch occasionally when page changes
+
+  const sportOptions = [
+    { value: 'all', label: 'Tất cả môn', icon: '' },
+    ...dbSports.map(s => ({ value: s.code, label: s.name, icon: s.icon }))
+  ];
+
+  const branchOptions = [
+    { value: 'all', label: 'Tất cả chi nhánh' },
+    { value: 'kt', label: '📍 LTV Kon Tum' },
+    { value: 'hn', label: '📍 LTV Hà Nội' },
+    { value: 'hcm', label: '📍 LTV TP.HCM' },
+    { value: 'dn', label: '📍 LTV Đà Nẵng' },
+    { value: 'ct', label: '📍 LTV Cần Thơ' },
+    { value: 'hp', label: '📍 LTV Hải Phòng' },
+    { value: 'qn', label: '📍 LTV Quảng Ninh' },
+    { value: 'nt', label: '📍 LTV Nha Trang' },
+    { value: 'dl', label: '📍 LTV Đà Lạt' },
+    { value: 'vt', label: '📍 LTV Vũng Tàu' },
+    { value: 'bd', label: '📍 LTV Bình Dương' },
+    { value: 'dni', label: '📍 LTV Đồng Nai' },
+    { value: 'bn', label: '📍 LTV Bắc Ninh' },
+    { value: 'th', label: '📍 LTV Thanh Hóa' },
+    { value: 'na', label: '📍 LTV Nghệ An' },
+    { value: 'hue', label: '📍 LTV Huế' },
+    { value: 'pq', label: '📍 LTV Phú Quốc' }
+  ];
+
+  const filteredCourts = useMemo(() => {
+    return courts.filter(court => {
+      const cSport = court.sport || 'badminton';
+      const cBranch = court.branch || 'kt';
+      if (courtSportFilter !== 'all' && cSport !== courtSportFilter) return false;
+      if (courtBranchFilter !== 'all' && cBranch !== courtBranchFilter) return false;
+      return true;
+    });
+  }, [courts, courtSportFilter, courtBranchFilter]);
 
   const isAdmin = Boolean(user && ['admin', 'manager', 'staff'].includes(user.role));
 
@@ -253,6 +303,14 @@ function App() {
     }
   }, [page, user]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest(".admin-user-info") && !event.target.closest(".admin-dropdown-menu")) setUserMenuOpen(false);
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
   // Login page
   if (!isAdmin || page === 'login') {
     return <AdminLoginPage setPage={setPage} />;
@@ -269,21 +327,51 @@ function App() {
           </h1>
         </div>
         <nav className="admin-nav">
-          <button className={page === 'courts' ? 'active' : ''} onClick={() => setPage('courts')}>🏸 Quản lý sân</button>
-          <button className={page === 'schedule' ? 'active' : ''} onClick={() => setPage('schedule')}>📅 Lịch sân</button>
-          <button className={page === 'bookings' ? 'active' : ''} onClick={() => setPage('bookings')}>📋 Quản lý đặt sân</button>
+          <div className="admin-nav-group">
+            <button className={`admin-nav-group-btn ${['courts', 'schedule', 'sports'].includes(page) ? 'active' : ''}`}>
+              🎾 Quản lý Sân ▾
+            </button>
+            <div className="admin-nav-dropdown">
+              <button className={page === 'courts' ? 'active' : ''} onClick={() => setPage('courts')}>🏸 Danh sách sân</button>
+              <button className={page === 'schedule' ? 'active' : ''} onClick={() => setPage('schedule')}>📅 Lịch thi đấu</button>
+              <button className={page === 'sports' ? 'active' : ''} onClick={() => setPage('sports')}>🏆 Môn thể thao</button>
+            </div>
+          </div>
+
+          <div className="admin-nav-group">
+            <button className={`admin-nav-group-btn ${['bookings', 'services', 'payments'].includes(page) ? 'active' : ''}`}>
+              💼 Vận hành ▾
+            </button>
+            <div className="admin-nav-dropdown">
+              <button className={page === 'bookings' ? 'active' : ''} onClick={() => setPage('bookings')}>📋 Quản lý đặt sân</button>
+              <button className={page === 'services' ? 'active' : ''} onClick={() => setPage('services')}>🛒 Cửa hàng dịch vụ</button>
+              {user?.role !== 'staff' && (
+                <button className={page === 'payments' ? 'active' : ''} onClick={() => setPage('payments')}>💳 Quản lý thanh toán</button>
+              )}
+            </div>
+          </div>
+
           {user?.role !== 'staff' && (
-            <button className={page === 'customers' ? 'active' : ''} onClick={() => setPage('customers')}>👥 Khách hàng</button>
+            <div className="admin-nav-group">
+              <button className={`admin-nav-group-btn ${['customers', 'staff'].includes(page) ? 'active' : ''}`}>
+                👥 Con người ▾
+              </button>
+              <div className="admin-nav-dropdown">
+                <button className={page === 'customers' ? 'active' : ''} onClick={() => setPage('customers')}>👥 Khách hàng</button>
+                <button className={page === 'staff' ? 'active' : ''} onClick={() => setPage('staff')}>👷 Nhân sự</button>
+              </div>
+            </div>
           )}
-          {user?.role !== 'staff' && (
-            <button className={page === 'staff' ? 'active' : ''} onClick={() => setPage('staff')}>👷 Nhân viên</button>
-          )}
-          <button className={page === 'services' ? 'active' : ''} onClick={() => setPage('services')}>🛒 Dịch vụ</button>
-          {user?.role !== 'staff' && (
-            <button className={page === 'payments' ? 'active' : ''} onClick={() => setPage('payments')}>💳 Thanh toán</button>
-          )}
-          <button className={page === 'reports' ? 'active' : ''} onClick={() => setPage('reports')}>📈 Báo cáo</button>
-          <button className={page === 'feedback' ? 'active' : ''} onClick={() => setPage('feedback')}>⭐ Phản hồi</button>
+
+          <div className="admin-nav-group">
+            <button className={`admin-nav-group-btn ${['reports', 'feedback'].includes(page) ? 'active' : ''}`}>
+              📊 Thống kê ▾
+            </button>
+            <div className="admin-nav-dropdown">
+              <button className={page === 'reports' ? 'active' : ''} onClick={() => setPage('reports')}>📈 Báo cáo doanh thu</button>
+              <button className={page === 'feedback' ? 'active' : ''} onClick={() => setPage('feedback')}>⭐ Đánh giá & Phản hồi</button>
+            </div>
+          </div>
         </nav>
         <div className="admin-header-right-wrapper" style={{ position: 'relative' }}>
           <div 
@@ -335,7 +423,7 @@ function App() {
 
       {/* Main Content */}
       <main className="admin-main">
-        {['dashboard', 'bookings', 'customers', 'payments', 'reports', 'staff', 'services', 'feedback'].includes(page) && (
+        {['dashboard', 'bookings', 'customers', 'payments', 'reports', 'staff', 'services', 'feedback', 'sports'].includes(page) && (
           <AdminDashboardModern
             bookingRequests={bookingRequests}
             users={users}
@@ -367,16 +455,36 @@ function App() {
         {page === 'courts' && (
           <div className="courts-management-page">
             <div className="courts-page-header">
-              <h2>🏸 Quản lý sân cầu lông</h2>
-              {user?.role !== 'staff' && (
-                <button className="btn-add-court" onClick={handleAddNewCourt}>
-                  ➕ Thêm sân mới
-                </button>
-              )}
+              <h2>🏸 Quản lý hệ thống sân</h2>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <select
+                  value={courtBranchFilter}
+                  onChange={e => setCourtBranchFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', outline: 'none', backgroundColor: 'white' }}
+                >
+                  {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                <CustomSelect
+                  value={courtSportFilter}
+                  onChange={e => setCourtSportFilter(e.target.value)}
+                  options={sportOptions}
+                />
+                {user?.role !== 'staff' && (
+                  <button className="btn-add-court" onClick={handleAddNewCourt}>
+                    ➕ Thêm sân mới
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="courts-grid-admin">
-              {courts.map(court => (
-                <div key={court.id} className="court-admin-card">
+            
+            {filteredCourts.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', background: '#fff', borderRadius: 20, color: '#888', marginTop: 20 }}>
+                Không tìm thấy sân thi đấu hoạt động nào trên hệ thống theo tiêu chí lọc này.
+              </div>
+            ) : (
+              <div className="courts-grid-admin">
+                {filteredCourts.map(court => (
+                  <div key={court.id || court._id} className="court-admin-card">
                   <img src={court.image} alt={court.name} />
                   <div className="court-admin-info">
                     <h3>{court.name}</h3>
@@ -385,6 +493,14 @@ function App() {
                       <span className="price">{court.price?.toLocaleString()}đ/giờ</span>
                       <span className={`status ${court.status === 'Trống' ? 'free' : 'busy'}`}>
                         {court.status}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '10px', background: '#f1f5f9', padding: '3px 8px', borderRadius: 12, fontWeight: 700, color: '#64748b' }}>
+                        {branchOptions.find(o => o.value === (court.branch || 'kt'))?.label}
+                      </span>
+                      <span style={{ fontSize: '10px', background: '#e0e7ff', padding: '3px 8px', borderRadius: 12, fontWeight: 700, color: '#4338ca' }}>
+                        {sportOptions.find(o => o.value === (court.sport || 'badminton'))?.label}
                       </span>
                     </div>
                     {user?.role !== 'staff' && (
@@ -399,6 +515,7 @@ function App() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 

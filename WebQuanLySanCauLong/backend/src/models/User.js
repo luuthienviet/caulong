@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
   shift: { type: String, default: '' },
   salary: { type: Number, default: 0 },
   status: { type: String, default: 'Hoạt động' },
+  branch: { type: String, default: 'kt' },
   points: { type: Number, default: 0 }, // Tích điểm thành viên
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },

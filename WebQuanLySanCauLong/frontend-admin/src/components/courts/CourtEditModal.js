@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API from '../../api';
+import CustomSelect from '../common/CustomSelect';
 
 export default function CourtEditModal({ court, onSave, onClose }) {
   const [name, setName] = useState(court?.name || '');
@@ -8,6 +10,38 @@ export default function CourtEditModal({ court, onSave, onClose }) {
   const [imgPreview, setImgPreview] = useState(court?.image || '');
   const [imgError, setImgError] = useState(false);
   const [status, setStatus] = useState(court?.status || 'Trống');
+  const [sport, setSport] = useState(court?.sport || 'badminton');
+  const [branch, setBranch] = useState(court?.branch || 'kt');
+
+  const [dbSports, setDbSports] = useState([]);
+  
+  useEffect(() => {
+    API.get('/sports')
+      .then(res => setDbSports(res.data))
+      .catch(err => console.error('Error fetching sports:', err));
+  }, []);
+
+  const sportOptions = dbSports.map(s => ({ value: s.code, label: s.name, icon: s.icon }));
+
+  const branchOptions = [
+    { value: 'kt', label: '📍 LTV Kon Tum' },
+    { value: 'hn', label: '📍 LTV Hà Nội' },
+    { value: 'hcm', label: '📍 LTV TP.HCM' },
+    { value: 'dn', label: '📍 LTV Đà Nẵng' },
+    { value: 'ct', label: '📍 LTV Cần Thơ' },
+    { value: 'hp', label: '📍 LTV Hải Phòng' },
+    { value: 'qn', label: '📍 LTV Quảng Ninh' },
+    { value: 'nt', label: '📍 LTV Nha Trang' },
+    { value: 'dl', label: '📍 LTV Đà Lạt' },
+    { value: 'vt', label: '📍 LTV Vũng Tàu' },
+    { value: 'bd', label: '📍 LTV Bình Dương' },
+    { value: 'dni', label: '📍 LTV Đồng Nai' },
+    { value: 'bn', label: '📍 LTV Bắc Ninh' },
+    { value: 'th', label: '📍 LTV Thanh Hóa' },
+    { value: 'na', label: '📍 LTV Nghệ An' },
+    { value: 'hue', label: '📍 LTV Huế' },
+    { value: 'pq', label: '📍 LTV Phú Quốc' }
+  ];
 
   const handleImageChange = (e) => {
     const url = e.target.value;
@@ -20,7 +54,7 @@ export default function CourtEditModal({ court, onSave, onClose }) {
     e.preventDefault();
     if (!name || !price) return alert('Vui lòng nhập tên và giá sân');
     if (Number(price) <= 0) return alert('Giá sân phải lớn hơn 0');
-    onSave({ ...court, name, price: Number(price), desc, image, status });
+    onSave({ ...court, name, price: Number(price), desc, image, status, sport, branch });
   };
 
   const statusConfig = {
@@ -123,6 +157,23 @@ export default function CourtEditModal({ court, onSave, onClose }) {
                 onBlur={e => e.target.style.borderColor = '#e0e0e0'}
                 required
               />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={styles.fieldLabel}>Chi nhánh</label>
+                <select value={branch} onChange={e => setBranch(e.target.value)} style={styles.input}>
+                  {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={styles.fieldLabel}>Môn thể thao</label>
+                <CustomSelect
+                  value={sport}
+                  onChange={e => setSport(e.target.value)}
+                  options={sportOptions}
+                />
+              </div>
             </div>
 
             <div>

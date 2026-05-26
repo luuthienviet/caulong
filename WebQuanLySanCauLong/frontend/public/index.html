@@ -5,11 +5,28 @@
     <meta name="google-site-verification" content="-Ziqcald-_gQzL3VzAhbJxMt5mULH3SMK4BfvmteaJE" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Hệ thống quản lý sân cầu lông Kontum" />
+    <meta name="description" content="Hệ thống quản lý sân Kontum" />
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon.png" />
-    <title>LTV Badminton</title>
+    <title>LTV Court</title>
   </head>
   <body>
     <div id="root"></div>
+    <div id="google_translate_element"></div>
+    <script>
+      function setCookie(key, value, expiry) {
+        var expires = new Date();
+        expires.setTime(expires.getTime() + (expiry * 24 * 60 * 60 * 1000));
+        document.cookie = key + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+      }
+      if (!document.cookie.includes('googtrans=')) {
+        setCookie('googtrans', '/vi/en', 30);
+      }
+    </script>
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement({pageLanguage: 'vi', autoDisplay: false}, 'google_translate_element');
+      }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   </body>
 </html>

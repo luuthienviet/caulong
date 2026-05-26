@@ -16,9 +16,9 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { TrendingUp, Calendar } from 'lucide-react';
+import { TrendingUp, Calendar, Banknote, CreditCard, ShoppingBag } from 'lucide-react';
 
-const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueCurrent, revenuePrevious, growthPct, peakRevenue, offPeakRevenue, peakPercent }) => {
+const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueCurrent, revenuePrevious, growthPct, peakRevenue, offPeakRevenue, peakPercent, cashRevenue = 0, onlineRevenue = 0, serviceRevenue = 0 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState(revenueFilter);
 
   const handlePeriodChange = (period) => {
@@ -111,6 +111,51 @@ const RevenueAnalytics = ({ chartData, revenueFilter, setRevenueFilter, revenueC
           <p className="text-sm text-gray-600 mb-2">Doanh thu giờ cao điểm</p>
           <p className="text-3xl font-bold text-gray-900">{peakRevenue.toLocaleString()}đ</p>
           <p className="text-xs text-gray-500 mt-2">17:00 - 21:00</p>
+        </div>
+
+        {/* Cash Revenue */}
+        <div className="rounded-2xl backdrop-blur-xl bg-white/80 border border-white/60 p-6 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+              <Banknote size={20} className="text-white" />
+            </div>
+            <span className="text-xs font-semibold text-green-600 bg-green-50 px-3 py-1 rounded-full">
+              Trực tiếp
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mb-2">Doanh thu tiền mặt</p>
+          <p className="text-3xl font-bold text-gray-900">{cashRevenue.toLocaleString()}đ</p>
+          <p className="text-xs text-gray-500 mt-2">Thu tại quầy / Sân</p>
+        </div>
+
+        {/* Online Revenue */}
+        <div className="rounded-2xl backdrop-blur-xl bg-white/80 border border-white/60 p-6 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+              <CreditCard size={20} className="text-white" />
+            </div>
+            <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+              Online
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mb-2">Doanh thu chuyển khoản</p>
+          <p className="text-3xl font-bold text-gray-900">{onlineRevenue.toLocaleString()}đ</p>
+          <p className="text-xs text-gray-500 mt-2">Ví điện tử / Ngân hàng</p>
+        </div>
+
+        {/* Service Revenue */}
+        <div className="rounded-2xl backdrop-blur-xl bg-white/80 border border-white/60 p-6 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
+              <ShoppingBag size={20} className="text-white" />
+            </div>
+            <span className="text-xs font-semibold text-pink-600 bg-pink-50 px-3 py-1 rounded-full">
+              Tiện ích
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mb-2">Doanh thu dịch vụ</p>
+          <p className="text-3xl font-bold text-gray-900">{serviceRevenue.toLocaleString()}đ</p>
+          <p className="text-xs text-gray-500 mt-2">Nước, đồ ăn, phụ kiện</p>
         </div>
       </div>
 

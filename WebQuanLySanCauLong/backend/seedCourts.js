@@ -1,31 +1,93 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import Court from './src/models/Court.js';
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import connectDB from "./src/config/db.js";
+import Court from "./src/models/Court.js";
+import Sport from "./src/models/Sport.js";
 
 dotenv.config();
 
-const courts = [
-  { name: "SÂN SỐ 01 - VIP", price: 200000, description: "Sân VIP, thảm Yonex cao cấp, ánh sáng chuẩn thi đấu.", image: "https://www.alobo.vn/wp-content/uploads/2025/08/image-108.png", status: "Trống" },
-  { name: "SÂN SỐ 02 - CHUẨN", price: 120000, description: "Sân tiêu chuẩn thi đấu, phù hợp mọi trình độ.", image: "https://sonsanepoxy.vn/wp-content/uploads/2023/07/Thi-cong-san-cau-long.jpg", status: "Trống" },
-  { name: "SÂN SỐ 03 - THƯỜNG", price: 100000, description: "Sân tiết kiệm, phù hợp tập luyện hằng ngày.", image: "https://thethaothienlong.vn/wp-content/uploads/2022/04/Danh-sach-san-cau-long-o-tphcm-1.jpg", status: "Trống" },
-  { name: "SÂN SỐ 04 - VIP", price: 200000, description: "Sân VIP mới, không gian rộng, ánh sáng chống chói.", image: "https://tinphatsports.vn/wp-content/uploads/2024/05/thi-cong-san-bong-chuyen-17-1.jpg", status: "Trống" },
-  { name: "SÂN SỐ 05 - VIP", price: 200000, description: "Sân VIP đạt tiêu chuẩn quốc tế BWF, thảm Yonex dày 5mm, khán đài mini chuyên nghiệp.", image: "https://plurysports.com/wp-content/uploads/2021/11/badminton-court-construction.jpg", status: "Trống" },
-  { name: "SÂN SỐ 06 - CHUẨN", price: 120000, description: "Sân tiêu chuẩn thi đấu, không gian thoáng mát, hệ thống thông gió hiện đại.", image: "https://onsport.vn/images/badminton-court.jpg", status: "Trống" },
-  { name: "SÂN SỐ 07 - THƯỜNG", price: 100000, description: "Sân tập luyện phổ thông, ánh sáng tốt, phù hợp cho học sinh/sinh viên rèn luyện sức khỏe.", image: "https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?q=80&w=2070", status: "Trống" },
-  { name: "SÂN SỐ 08 - CHUẨN", price: 120000, description: "Sân tiêu chuẩn thi đấu chuyên nghiệp, hệ thống đèn chống lóa mắt tốt cho sức khỏe thị lực.", image: "https://thethaodonga.com/wp-content/uploads/2022/10/kich-thuoc-san-cau-long-1.jpeg", status: "Trống" }
+const branches = [
+  'kt', 'hn', 'hcm', 'dn', 'ct', 'hp', 'qn', 'nt', 'dl', 'vt', 'bd', 'dni', 'bn', 'th', 'na', 'hue', 'pq'
 ];
 
-const seed = async () => {
+const sampleImages = {
+  'badminton': [
+    'https://sonsanepoxy.vn/wp-content/uploads/2023/07/Thi-cong-san-cau-long.jpg',
+    'https://thethaothienlong.vn/wp-content/uploads/2022/04/Danh-sach-san-cau-long-o-tphcm-1.jpg',
+    'https://tinphatsports.vn/wp-content/uploads/2024/05/thi-cong-san-bong-chuyen-17-1.jpg',
+    'https://plurysports.com/wp-content/uploads/2021/11/badminton-court-construction.jpg'
+  ],
+  'volleyball': [
+    'https://thethaongoaitroi.vn/wp-content/uploads/2021/04/san-bong-chuyen-tieu-chuan.jpg',
+    'https://thethaodonga.com/wp-content/uploads/2022/08/kich-thuoc-san-bong-chuyen-1.jpeg'
+  ],
+  'tennis': [
+    'https://thethaodonga.com/wp-content/uploads/2022/07/kich-thuoc-san-tennis.jpeg',
+    'https://cdn.tuoitre.vn/471584752817336320/2023/1/14/tennis-1673663673400508101511.jpg'
+  ],
+  'basketball': [
+    'https://sport24h.com.vn/uploads/images/kich-thuoc-san-bong-ro-tieu-chuan.jpg',
+    'https://www.thethaothientruong.vn/uploads/contents/kich-thuoc-san-bong-ro.jpg'
+  ],
+  'pickleball': [
+    'https://cdn.tuoitre.vn/471584752817336320/2024/8/16/pickleball-17237936154691436157017.jpg',
+    'https://cdn.thuvienphapluat.vn/uploads/tintuc/2024/08/21/san-pickleball.jpg'
+  ],
+  'gôn': [
+    'https://cdn.sgtiepthi.vn/wp-content/uploads/2021/11/170669-San-golf-Tan-Son-Nhat.jpg',
+    'https://www.vinpearl.com/sites/default/files/2021-04/san-golf-phu-quoc-8_1617260551.jpg'
+  ]
+};
+
+const seedCourts = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    await Court.deleteMany(); // Xóa tất cả sân cũ
-    await Court.insertMany(courts);
-    console.log('✅ Đã thêm 8 sân mặc định vào database thành công!');
+    await connectDB();
+
+    const sports = await Sport.find();
+    if (sports.length === 0) {
+      console.log("Không có môn thể thao nào trong DB! Hãy chạy seedSports.js trước.");
+      process.exit();
+    }
+
+    let courtsToInsert = [];
+
+    sports.forEach(sport => {
+      // Create 2 to 4 courts for each sport
+      const numCourts = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
+      
+      for (let i = 1; i <= numCourts; i++) {
+        // Pick a random branch
+        const branch = branches[Math.floor(Math.random() * branches.length)];
+        
+        // Pick a random image or fallback
+        const images = sampleImages[sport.code] || sampleImages['badminton'];
+        const image = images[Math.floor(Math.random() * images.length)];
+
+        // Generate random price between 100k and 300k
+        const price = Math.floor(Math.random() * 20 + 10) * 10000;
+
+        courtsToInsert.push({
+          name: `SÂN ${sport.name.toUpperCase()} LTV ${branch.toUpperCase()} - ${i.toString().padStart(2, '0')}`,
+          price: price,
+          description: `Sân ${sport.name} tiêu chuẩn quốc tế, phù hợp cho mọi lứa tuổi và trình độ. Trang thiết bị hiện đại nhất.`,
+          image: image,
+          sport: sport.code,
+          branch: branch,
+          status: "Trống",
+          avgRating: (Math.random() * 1.5 + 3.5).toFixed(1), // 3.5 to 5.0
+          reviewCount: Math.floor(Math.random() * 50)
+        });
+      }
+    });
+
+    await Court.insertMany(courtsToInsert);
+    console.log(`Đã tạo thành công ${courtsToInsert.length} sân mẫu cho ${sports.length} môn thể thao!`);
+    
     process.exit();
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Error seeding courts:", error);
     process.exit(1);
   }
 };
 
-seed();
+seedCourts();

@@ -1,5 +1,12 @@
 import React from "react";
 
+const branchNames = {
+  'kt': 'Kon Tum', 'hn': 'Hà Nội', 'hcm': 'Hồ Chí Minh', 'dn': 'Đà Nẵng',
+  'ct': 'Cần Thơ', 'hp': 'Hải Phòng', 'qn': 'Quảng Ninh', 'nt': 'Nha Trang',
+  'dl': 'Đà Lạt', 'vt': 'Vũng Tàu', 'bd': 'Bình Dương', 'dni': 'Đồng Nai',
+  'bn': 'Bắc Ninh', 'th': 'Thanh Hóa', 'na': 'Nghệ An', 'hue': 'Huế', 'pq': 'Phú Quốc'
+};
+
 export default function CourtCard({
   court,
   onViewCourt,
@@ -33,6 +40,7 @@ export default function CourtCard({
   }
 
   const isMaintenance = court.status === 'Đang bảo trì';
+  const branchName = court.branch ? (branchNames[court.branch.toLowerCase()] || court.branch.toUpperCase()) : null;
 
   return (
     <div className="court-card-wrapper">
@@ -54,9 +62,15 @@ export default function CourtCard({
 
         <div className="court-content">
           <div className="court-title">{courtName}</div>
+          {branchName && (
+            <div style={{ fontSize: '0.8rem', color: '#0d6efd', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              📍 Chi nhánh: {branchName}
+            </div>
+          )}
           <p className="court-desc">{courtDesc}</p>
 
           {/* Thống kê đánh giá và lượt đặt */}
+
           <div className="court-stats">
             <div className="stat-item">
               <span className="stat-icon">⭐</span>

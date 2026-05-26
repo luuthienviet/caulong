@@ -7,7 +7,7 @@ export default function ChatBot() {
     {
       id: 1,
       sender: 'bot',
-      text: '👋 Xin chào! Tôi là Trợ lý ảo AI của **LTV BADMINTON**. Tôi có thể giải đáp mọi câu hỏi — từ đặt sân, bảng giá, đến kiến thức cầu lông, học tập, cuộc sống hay bất cứ điều gì bạn thắc mắc. Hỏi tôi đi nào! 🏸',
+      text: '👋 Xin chào! Tôi là Trợ lý ảo AI của **LTV COURT**. Tôi có thể giải đáp mọi câu hỏi — từ đặt sân, bảng giá, đến kiến thức thể thao, học tập, cuộc sống hay bất cứ điều gì bạn thắc mắc. Hỏi tôi đi nào! ⚽🏀🎾',
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -186,8 +186,8 @@ export default function ChatBot() {
             <button onClick={() => handleSend('Hướng dẫn đặt sân')}>📅 Đặt sân?</button>
             <button onClick={() => handleSend('Địa chỉ và giờ mở cửa')}>📍 Địa chỉ?</button>
             <button onClick={() => handleSend('Chính sách hủy sân')}>🔄 Hủy/Đổi?</button>
-            <button onClick={() => handleSend('Luật chơi cầu lông cơ bản')}>📏 Luật chơi?</button>
-            <button onClick={() => handleSend('Cho tôi mẹo chơi cầu lông hay')}>💡 Mẹo hay?</button>
+            <button onClick={() => handleSend('Luật chơi thể thao cơ bản')}>📏 Luật chơi?</button>
+            <button onClick={() => handleSend('Cho tôi mẹo chơi thể thao hay')}>💡 Mẹo hay?</button>
           </div>
 
           {/* Input */}

@@ -11,6 +11,7 @@ import notificationRoutes from './src/routes/notificationRoutes.js';
 import contactRoutes from './src/routes/contactRoutes.js';
 import chatbotRoutes from './src/routes/chatbotRoutes.js';
 import serviceRoutes from './src/routes/serviceRoutes.js';
+import sportRoutes from './src/routes/sportRoutes.js';
 
 dotenv.config();
 import bcrypt from 'bcryptjs';
@@ -51,6 +52,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/sports', sportRoutes);
 
 app.get("/", (req, res) => res.send("API chạy OK"));
 

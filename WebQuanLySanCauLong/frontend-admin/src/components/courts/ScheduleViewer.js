@@ -13,6 +13,7 @@ import {
   MapPin
 } from 'lucide-react';
 import API from '../../api';
+import CustomSelect from '../common/CustomSelect';
 
 const scheduleHours = Array.from({ length: 17 }, (_, i) => i + 5);
 
@@ -70,6 +71,44 @@ export default function ScheduleViewer({
   const [quickBookPhone, setQuickBookPhone] = useState('');
   const [quickBookPaid, setQuickBookPaid] = useState(true);
   const [submittingQuickBook, setSubmittingQuickBook] = useState(false);
+
+  // Filters for multi-sport & branch logic
+  const [selectedSport, setSelectedSport] = useState('all');
+  const [selectedBranch, setSelectedBranch] = useState('all');
+
+  const [dbSports, setDbSports] = useState([]);
+  
+  useEffect(() => {
+    API.get('/sports')
+      .then(res => setDbSports(res.data))
+      .catch(err => console.error('Error fetching sports:', err));
+  }, []);
+
+  const sportOptions = [
+    { value: 'all', label: 'Tất cả môn', icon: '' },
+    ...dbSports.map(s => ({ value: s.code, label: s.name, icon: s.icon }))
+  ];
+
+  const branchOptions = [
+    { value: 'all', label: 'Tất cả chi nhánh' },
+    { value: 'kt', label: '📍 LTV Kon Tum' },
+    { value: 'hn', label: '📍 LTV Hà Nội' },
+    { value: 'hcm', label: '📍 LTV TP.HCM' },
+    { value: 'dn', label: '📍 LTV Đà Nẵng' },
+    { value: 'ct', label: '📍 LTV Cần Thơ' },
+    { value: 'hp', label: '📍 LTV Hải Phòng' },
+    { value: 'qn', label: '📍 LTV Quảng Ninh' },
+    { value: 'nt', label: '📍 LTV Nha Trang' },
+    { value: 'dl', label: '📍 LTV Đà Lạt' },
+    { value: 'vt', label: '📍 LTV Vũng Tàu' },
+    { value: 'bd', label: '📍 LTV Bình Dương' },
+    { value: 'dni', label: '📍 LTV Đồng Nai' },
+    { value: 'bn', label: '📍 LTV Bắc Ninh' },
+    { value: 'th', label: '📍 LTV Thanh Hóa' },
+    { value: 'na', label: '📍 LTV Nghệ An' },
+    { value: 'hue', label: '📍 LTV Huế' },
+    { value: 'pq', label: '📍 LTV Phú Quốc' }
+  ];
 
   // Generate 7 days navigation starting from today
   useEffect(() => {
@@ -140,27 +179,62 @@ export default function ScheduleViewer({
     }
   };
 
+  // Mock filtering logic for courts
+  const filteredCourts = courts.filter(court => {
+    const cSport = court.sport || 'badminton'; // fallback to badminton if no sport is set in DB
+    const cBranch = court.branch || 'kt';     // fallback to kt if no branch is set in DB
+
+    const matchSport = selectedSport === 'all' || cSport === selectedSport;
+    const matchBranch = selectedBranch === 'all' || cBranch === selectedBranch;
+
+    return matchSport && matchBranch;
+  });
+
   return (
     <div className="modern-scheduler-container">
       {/* ── HEADER & SEARCH NAVIGATOR ── */}
       <div className="scheduler-header">
         <div className="header-meta">
-          <div className="icon-badge">🏸</div>
+          <div className="icon-badge">🏟️</div>
           <div>
-            <h2>Lịch Đặt Sân Hôm Nay</h2>
-            <p>Trực quan hóa trạng thái sân, bấm vào ô <strong>Trống</strong> để đặt nhanh hoặc xem thông tin.</p>
+            <h2>Lịch Đặt Sân Toàn Quốc</h2>
+            <p>Trực quan hóa trạng thái sân đa môn thể thao, đa chi nhánh.</p>
           </div>
         </div>
 
-        {/* Date Selector input fallback */}
-        <div className="date-input-picker">
-          <Calendar size={18} className="text-blue-500" />
-          <input
-            type="date"
-            value={date}
-            min={today}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
+        <div className="header-filters" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Branch Filter */}
+          <div className="filter-select-wrapper">
+            <select 
+              value={selectedBranch} 
+              onChange={e => setSelectedBranch(e.target.value)}
+              className="styled-select"
+            >
+              {branchOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sport Filter */}
+          <div className="filter-select-wrapper">
+            <CustomSelect
+              value={selectedSport}
+              onChange={e => setSelectedSport(e.target.value)}
+              options={sportOptions}
+            />
+          </div>
+
+          {/* Date Selector input fallback */}
+          <div className="date-input-picker">
+            <Calendar size={18} className="text-blue-500" />
+            <input
+              type="date"
+              value={date}
+              min={today}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
@@ -213,7 +287,7 @@ export default function ScheduleViewer({
             </div>
 
             {/* Timeline Row for each Court */}
-            {courts.map((court) => (
+            {filteredCourts.map((court) => (
               <div key={court.id || court._id} className="court-timeline-row">
                 {/* Court Meta Card on Left */}
                 <div className="court-info-card">
@@ -483,6 +557,28 @@ export default function ScheduleViewer({
           color: #1e293b;
           font-weight: 600;
           cursor: pointer;
+        }
+
+        /* Select styling for filters */
+        .styled-select {
+          border: 1.5px solid #e2e8f0;
+          background: #fff;
+          border-radius: 16px;
+          padding: 10px 36px 10px 16px;
+          font-size: 0.95rem;
+          color: #1e293b;
+          font-weight: 600;
+          cursor: pointer;
+          outline: none;
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200.svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 14px center;
+          transition: border-color 0.2s;
+        }
+
+        .styled-select:focus {
+          border-color: #3b82f6;
         }
 
         /* Day card navigator */

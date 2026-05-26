@@ -5,10 +5,32 @@ import API from '../../api';
 export default function AdminStaffManagement() {
   const [staffList, setStaffList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [branchFilter, setBranchFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
+
+  const branchOptions = [
+    { value: 'all', label: 'Tất cả chi nhánh' },
+    { value: 'kt', label: '📍 LTV Kon Tum' },
+    { value: 'hn', label: '📍 LTV Hà Nội' },
+    { value: 'hcm', label: '📍 LTV TP.HCM' },
+    { value: 'dn', label: '📍 LTV Đà Nẵng' },
+    { value: 'ct', label: '📍 LTV Cần Thơ' },
+    { value: 'hp', label: '📍 LTV Hải Phòng' },
+    { value: 'qn', label: '📍 LTV Quảng Ninh' },
+    { value: 'nt', label: '📍 LTV Nha Trang' },
+    { value: 'dl', label: '📍 LTV Đà Lạt' },
+    { value: 'vt', label: '📍 LTV Vũng Tàu' },
+    { value: 'bd', label: '📍 LTV Bình Dương' },
+    { value: 'dni', label: '📍 LTV Đồng Nai' },
+    { value: 'bn', label: '📍 LTV Bắc Ninh' },
+    { value: 'th', label: '📍 LTV Thanh Hóa' },
+    { value: 'na', label: '📍 LTV Nghệ An' },
+    { value: 'hue', label: '📍 LTV Huế' },
+    { value: 'pq', label: '📍 LTV Phú Quốc' }
+  ];
 
   // Form State
   const [formData, setFormData] = useState({
@@ -20,6 +42,7 @@ export default function AdminStaffManagement() {
     email: '',
     shift: 'Ca sáng (06:00 - 14:00)',
     salary: '',
+    branch: 'kt',
     status: 'Hoạt động'
   });
 
@@ -53,6 +76,7 @@ export default function AdminStaffManagement() {
         email: staff.email || '',
         shift: staff.shift || 'Ca sáng (06:00 - 14:00)',
         salary: staff.salary || '',
+        branch: staff.branch || 'kt',
         status: staff.status || 'Hoạt động'
       });
     } else {
@@ -66,6 +90,7 @@ export default function AdminStaffManagement() {
         email: '',
         shift: 'Ca sáng (06:00 - 14:00)',
         salary: '',
+        branch: 'kt',
         status: 'Hoạt động'
       });
     }
@@ -161,10 +186,13 @@ export default function AdminStaffManagement() {
       }
 
       const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
+      
+      const itemBranch = item.branch || 'kt';
+      const matchesBranch = branchFilter === 'all' || itemBranch === branchFilter;
 
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesSearch && matchesRole && matchesStatus && matchesBranch;
     });
-  }, [staffList, searchQuery, roleFilter, statusFilter]);
+  }, [staffList, searchQuery, roleFilter, statusFilter, branchFilter]);
 
   // Calculations for stats cards
   const stats = useMemo(() => {
@@ -181,7 +209,7 @@ export default function AdminStaffManagement() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">👷 HỆ THỐNG NHÂN SỰ</p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">Quản lý nhân viên</h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">Quản lý danh sách nhân sự, phân ca trực, theo dõi lương và trạng thái hoạt động của nhân viên sân cầu lông.</p>
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">Quản lý danh sách nhân sự, phân ca trực, theo dõi lương và trạng thái hoạt động của nhân viên.</p>
         </div>
         <button
           type="button"
@@ -240,6 +268,14 @@ export default function AdminStaffManagement() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
+          >
+            {branchOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -315,6 +351,9 @@ export default function AdminStaffManagement() {
                         <span className="flex items-center gap-1.5 text-slate-500">
                           <Mail size={12} className="text-slate-400" />
                           {staff.email || 'Chưa cập nhật'}
+                        </span>
+                        <span className="flex items-center gap-1.5 font-semibold text-slate-600 mt-1">
+                          {branchOptions.find(o => o.value === (staff.branch || 'kt'))?.label}
                         </span>
                       </div>
                     </td>
@@ -482,6 +521,17 @@ export default function AdminStaffManagement() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Chi nhánh</label>
+                  <select
+                    name="branch"
+                    value={formData.branch}
+                    onChange={handleInputChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-500 transition"
+                  >
+                    {branchOptions.filter(o => o.value !== 'all').map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Mức lương (VNĐ)</label>
                   <input

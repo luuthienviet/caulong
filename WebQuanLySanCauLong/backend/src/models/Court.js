@@ -6,6 +6,8 @@ const courtSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   description: { type: String },
   image: { type: String },
+  sport: { type: String, default: "badminton" },
+  branch: { type: String, default: "kt" },
   status: { type: String, enum: ["Trống", "Đang sử dụng", "Đang bảo trì"], default: "Trống" },
   reviewCount: { type: Number, default: 0 }
 }, { timestamps: true });

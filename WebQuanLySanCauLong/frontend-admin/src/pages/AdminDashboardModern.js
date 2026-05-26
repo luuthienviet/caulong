@@ -9,6 +9,7 @@ import AdminPaymentManagement from '../components/management/AdminPaymentManagem
 import AdminFeedbackManagement from '../components/management/AdminFeedbackManagement';
 import AdminStaffManagement from '../components/management/AdminStaffManagement';
 import AdminServiceManagement from '../components/management/AdminServiceManagement';
+import AdminSportManagement from '../components/management/AdminSportManagement';
 
 export default function AdminDashboardModern({ 
   bookingRequests = [], 
@@ -160,6 +161,21 @@ export default function AdminDashboardModern({
   const totalPeak = peakRevenue + offPeakRevenue || 1;
   const peakPercent = Math.round((peakRevenue / totalPeak) * 100);
 
+  // Revenue Breakdown
+  const cashRevenue = getRevenueTotal(
+    currentPeriodBookings.filter(b => {
+      const m = String(b.paymentMethod || '').toLowerCase();
+      return m.includes('cash') || m.includes('tiền mặt') || m.includes('tại sân');
+    })
+  );
+  const onlineRevenue = getRevenueTotal(
+    currentPeriodBookings.filter(b => {
+      const m = String(b.paymentMethod || '').toLowerCase();
+      return !m.includes('cash') && !m.includes('tiền mặt') && !m.includes('tại sân');
+    })
+  );
+  const serviceRevenue = 0; // Placeholder for future service sales
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       {showHeader && <DashboardHeader user={user} onLogout={() => setPage('home')} />}
@@ -184,6 +200,9 @@ export default function AdminDashboardModern({
               peakRevenue={peakRevenue}
               offPeakRevenue={offPeakRevenue}
               peakPercent={peakPercent}
+              cashRevenue={cashRevenue}
+              onlineRevenue={onlineRevenue}
+              serviceRevenue={serviceRevenue}
             />
             <div className="border-t border-gray-200/50"></div>
             <CourtPerformance
@@ -228,6 +247,7 @@ export default function AdminDashboardModern({
             users={users}
             bookingRequests={bookingRequests}
             refreshUsers={refreshUsers}
+            courts={courts}
           />
         )}
 
@@ -235,6 +255,7 @@ export default function AdminDashboardModern({
           <AdminPaymentManagement
             bookingRequests={bookingRequests}
             refreshBookings={refreshBookings}
+            courts={courts}
           />
         )}
 
@@ -244,6 +265,10 @@ export default function AdminDashboardModern({
 
         {page === 'services' && (
           <AdminServiceManagement user={user} />
+        )}
+
+        {page === 'sports' && (
+          <AdminSportManagement courts={courts} />
         )}
 
         {page === 'feedback' && (

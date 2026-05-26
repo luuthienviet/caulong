@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import API from '../../api';
 
 const getUserName = (user) => user?.name || user?.username || 'Khách';
@@ -6,11 +6,33 @@ const getUserEmail = (user) => user?.email || 'Chưa có';
 const getUserPhone = (user) => user?.phone || 'Chưa có';
 const formatMoney = (value) => (value || 0).toLocaleString('vi-VN') + ' VNĐ';
 
-export default function AdminCustomerManagement({ users = [], bookingRequests = [], refreshUsers }) {
+export default function AdminCustomerManagement({ users = [], bookingRequests = [], refreshUsers, courts = [] }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [branchFilter, setBranchFilter] = useState('all');
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const branchOptions = [
+    { value: 'all', label: 'Tất cả chi nhánh' },
+    { value: 'kt', label: '📍 LTV Kon Tum' },
+    { value: 'hn', label: '📍 LTV Hà Nội' },
+    { value: 'hcm', label: '📍 LTV TP.HCM' },
+    { value: 'dn', label: '📍 LTV Đà Nẵng' },
+    { value: 'ct', label: '📍 LTV Cần Thơ' },
+    { value: 'hp', label: '📍 LTV Hải Phòng' },
+    { value: 'qn', label: '📍 LTV Quảng Ninh' },
+    { value: 'nt', label: '📍 LTV Nha Trang' },
+    { value: 'dl', label: '📍 LTV Đà Lạt' },
+    { value: 'vt', label: '📍 LTV Vũng Tàu' },
+    { value: 'bd', label: '📍 LTV Bình Dương' },
+    { value: 'dni', label: '📍 LTV Đồng Nai' },
+    { value: 'bn', label: '📍 LTV Bắc Ninh' },
+    { value: 'th', label: '📍 LTV Thanh Hóa' },
+    { value: 'na', label: '📍 LTV Nghệ An' },
+    { value: 'hue', label: '📍 LTV Huế' },
+    { value: 'pq', label: '📍 LTV Phú Quốc' }
+  ];
 
   const customers = useMemo(() => {
     return users.map((user) => {
@@ -46,14 +68,31 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
   }, [users, bookingRequests]);
 
   const filteredCustomers = useMemo(() => {
+    let result = customers;
+    
+    // Filter by branch
+    if (branchFilter !== 'all') {
+      result = result.filter(customer => {
+        // Find if this customer has any booking in the selected branch
+        return customer.bookings.some(booking => {
+          const court = courts.find(c => String(c.id || c._id) === String(booking.courtId)) || {};
+          const cBranch = court?.branch || 'kt';
+          return cBranch === branchFilter;
+        });
+      });
+    }
+
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return customers;
-    return customers.filter((customer) =>
-      getUserName(customer).toLowerCase().includes(term) ||
-      getUserEmail(customer).toLowerCase().includes(term) ||
-      getUserPhone(customer).toLowerCase().includes(term)
-    );
-  }, [customers, searchQuery]);
+    if (term) {
+      result = result.filter((customer) =>
+        getUserName(customer).toLowerCase().includes(term) ||
+        getUserEmail(customer).toLowerCase().includes(term) ||
+        getUserPhone(customer).toLowerCase().includes(term)
+      );
+    }
+    
+    return result;
+  }, [customers, searchQuery, branchFilter, courts]);
 
   const selectedCustomer = filteredCustomers.find((customer) => customer.userId === selectedCustomerId);
 
@@ -86,6 +125,13 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
           <p className="mt-2 max-w-2xl text-sm text-slate-500">Danh sách khách, thống kê đặt sân và lịch sử đơn hàng của từng khách.</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <select
+            value={branchFilter}
+            onChange={e => setBranchFilter(e.target.value)}
+            className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white cursor-pointer"
+          >
+            {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
           <input
             type="search"
             value={searchQuery}
@@ -109,7 +155,6 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
             <thead className="bg-slate-100 text-slate-600">
               <tr>
                 <th className="px-4 py-4 font-medium">Khách hàng</th>
-                <th className="px-4 py-4 font-medium">Email</th>
                 <th className="px-4 py-4 font-medium">Số điện thoại</th>
                 <th className="px-4 py-4 font-medium">Đơn đã đặt</th>
                 <th className="px-4 py-4 font-medium">Tổng chi</th>
@@ -122,11 +167,12 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
             <tbody>
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Không tìm thấy khách hàng.</td>
+                  <td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">Không tìm thấy khách hàng.</td>
                 </tr>
               ) : (
                 filteredCustomers.map((customer) => (
-                  <tr key={customer.userId} className="border-t border-slate-200 hover:bg-white">
+                  <React.Fragment key={customer.userId}>
+                    <tr className="border-t border-slate-200 hover:bg-white">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-base font-bold text-white">
@@ -138,7 +184,6 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-slate-600">{getUserEmail(customer)}</td>
                     <td className="px-4 py-4 text-slate-600">{getUserPhone(customer)}</td>
                     <td className="px-4 py-4 font-semibold text-slate-900">{customer.totalBookings}</td>
                     <td className="px-4 py-4 font-semibold text-slate-900">{formatMoney(customer.totalSpent)}</td>
@@ -167,7 +212,7 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                           onClick={() => setSelectedCustomerId(customer.userId === selectedCustomerId ? null : customer.userId)}
                           className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
                         >
-                          {selectedCustomerId === customer.userId ? 'Ẩn lịch sử' : 'Lịch sử'}
+                          {selectedCustomerId === customer.userId ? 'Ẩn chi tiết' : 'Xem chi tiết'}
                         </button>
                         <button
                           type="button"
@@ -180,7 +225,48 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                       </div>
                     </td>
                   </tr>
-                ))
+                  {selectedCustomerId === customer.userId && (
+                    <tr className="border-t border-slate-200 bg-slate-50/50">
+                      <td colSpan="8" className="p-4">
+                        <div className="rounded-[22px] border border-slate-200 bg-white p-4">
+                          <h4 className="mb-4 font-semibold text-slate-900">Lịch sử đặt sân</h4>
+                          <table className="min-w-full text-left text-sm text-slate-700">
+                            <thead className="bg-slate-100 text-slate-600">
+                              <tr>
+                                <th className="px-4 py-3">Ngày</th>
+                                <th className="px-4 py-3">Giờ</th>
+                                <th className="px-4 py-3">Sân</th>
+                                <th className="px-4 py-3">Tổng tiền</th>
+                                <th className="px-4 py-3">Trạng thái</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {customer.bookings.length === 0 ? (
+                                <tr>
+                                  <td colSpan="5" className="px-4 py-8 text-center text-sm text-slate-500">Chưa có lịch sử đặt sân.</td>
+                                </tr>
+                              ) : (
+                                customer.bookings
+                                  .slice()
+                                  .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                  .map((booking) => (
+                                    <tr key={booking._id || booking.id} className="border-t border-slate-200">
+                                      <td className="px-4 py-3">{booking.date}</td>
+                                      <td className="px-4 py-3">{booking.hour}:00</td>
+                                      <td className="px-4 py-3">{booking.courtName || '—'}</td>
+                                      <td className="px-4 py-3">{formatMoney(booking.total)}</td>
+                                      <td className="px-4 py-3">{booking.status === 'approved' ? 'Đã duyệt' : booking.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}</td>
+                                    </tr>
+                                  ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))
               )}
             </tbody>
           </table>
@@ -198,7 +284,6 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                   </div>
                   <div className="min-w-0">
                     <div className="font-semibold text-slate-900">{getUserName(customer)}</div>
-                    <div className="text-xs text-slate-500">{getUserEmail(customer)}</div>
                   </div>
                 </div>
                 <div className="mt-4 grid gap-2 text-sm text-slate-600">
@@ -214,7 +299,7 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                     onClick={() => setSelectedCustomerId(customer.userId === selectedCustomerId ? null : customer.userId)}
                     className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700"
                   >
-                    {selectedCustomerId === customer.userId ? 'Ẩn lịch sử' : 'Lịch sử'}
+                    {selectedCustomerId === customer.userId ? 'Ẩn chi tiết' : 'Xem chi tiết'}
                   </button>
                   <button
                     type="button"
@@ -225,63 +310,40 @@ export default function AdminCustomerManagement({ users = [], bookingRequests = 
                     {customer.isLocked ? 'Mở khóa' : 'Khóa'}
                   </button>
                 </div>
+                {selectedCustomerId === customer.userId && (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <h4 className="mb-3 text-sm font-semibold text-slate-900">Lịch sử đặt sân</h4>
+                    <div className="flex flex-col gap-3">
+                      {customer.bookings.length === 0 ? (
+                        <div className="text-center text-xs text-slate-500">Chưa có lịch sử đặt sân.</div>
+                      ) : (
+                        customer.bookings
+                          .slice()
+                          .sort((a, b) => new Date(b.date) - new Date(a.date))
+                          .map((booking) => (
+                            <div key={booking._id || booking.id} className="rounded-xl bg-white p-3 shadow-sm text-xs border border-slate-100">
+                              <div className="flex justify-between font-semibold text-slate-900 mb-1">
+                                <span>{booking.date} - {booking.hour}:00</span>
+                                <span>{formatMoney(booking.total)}</span>
+                              </div>
+                              <div className="flex justify-between text-slate-500">
+                                <span>Sân: {booking.courtName || '—'}</span>
+                                <span className={booking.status === 'approved' ? 'text-emerald-600' : booking.status === 'pending' ? 'text-amber-600' : 'text-rose-600'}>
+                                  {booking.status === 'approved' ? 'Đã duyệt' : booking.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
 
-      {selectedCustomer && (
-        <div className="mt-8 rounded-[28px] border border-slate-200 bg-slate-50 p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="text-xl font-semibold text-slate-900">Lịch sử đặt sân của {getUserName(selectedCustomer)}</h3>
-              <p className="text-sm text-slate-500">Xem các đơn đặt sân đã tạo bởi khách này.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedCustomerId(null)}
-              className="rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Đóng
-            </button>
-          </div>
-
-          <div className="mt-6 overflow-x-auto rounded-[22px] border border-slate-200 bg-white p-4">
-            <table className="min-w-full text-left text-sm text-slate-700">
-              <thead className="bg-slate-100 text-slate-600">
-                <tr>
-                  <th className="px-4 py-3">Ngày</th>
-                  <th className="px-4 py-3">Giờ</th>
-                  <th className="px-4 py-3">Sân</th>
-                  <th className="px-4 py-3">Tổng tiền</th>
-                  <th className="px-4 py-3">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedCustomer.bookings.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-4 py-12 text-center text-sm text-slate-500">Chưa có lịch sử đặt sân.</td>
-                  </tr>
-                ) : (
-                  selectedCustomer.bookings
-                    .slice()
-                    .sort((a, b) => new Date(b.date) - new Date(a.date))
-                    .map((booking) => (
-                      <tr key={booking._id || booking.id} className="border-t border-slate-200">
-                        <td className="px-4 py-4">{booking.date}</td>
-                        <td className="px-4 py-4">{booking.hour}:00</td>
-                        <td className="px-4 py-4">{booking.courtName || '—'}</td>
-                        <td className="px-4 py-4">{formatMoney(booking.total)}</td>
-                        <td className="px-4 py-4">{booking.status === 'approved' ? 'Đã duyệt' : booking.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}</td>
-                      </tr>
-                    ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
     </section>

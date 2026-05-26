@@ -3,15 +3,15 @@
 ## 1. GIỚI THIỆU CHUNG (SỨ MỆNH, TẦM NHÌN, MỤC TIÊU)
 
 ### 1.1. Bối cảnh dự án
-Trong bối cảnh nền kinh tế số phát triển mạnh mẽ và nhu cầu rèn luyện sức khỏe, đặc biệt là bộ môn cầu lông, đang tăng trưởng vượt bậc tại Việt Nam, các câu lạc bộ (CLB) cầu lông đối mặt với thách thức lớn trong việc tối ưu hóa hiệu suất vận hành. CLB Cầu lông LTV Badminton (địa chỉ tại **704 Phan Đình Phùng, Phường Quang Trung, TP. Kon Tum**) cũng không nằm ngoài xu thế đó. Phương pháp đặt sân truyền thống qua điện thoại, tin nhắn mạng xã hội hay ghi chép sổ tay bộc lộ nhiều điểm hạn chế như: dễ nhầm lẫn lịch đặt, trùng sân, khó quản lý doanh thu thời gian thực, quản lý ca trực nhân viên thủ công phức tạp và thiếu tính tương tác trực tiếp 24/7 với khách hàng.
+Trong bối cảnh nền kinh tế số phát triển mạnh mẽ và nhu cầu rèn luyện sức khỏe đang tăng trưởng vượt bậc tại Việt Nam, các câu lạc bộ (CLB) thể thao đối mặt với thách thức lớn trong việc tối ưu hóa hiệu suất vận hành. Hệ thống thể thao LTV (địa chỉ tại **704 Phan Đình Phùng, Phường Quang Trung, TP. Kon Tum**) cũng không nằm ngoài xu thế đó. Phương pháp đặt sân truyền thống qua điện thoại, tin nhắn mạng xã hội hay ghi chép sổ tay bộc lộ nhiều điểm hạn chế như: dễ nhầm lẫn lịch đặt, trùng sân, khó quản lý doanh thu thời gian thực, quản lý ca trực nhân viên thủ công phức tạp và thiếu tính tương tác trực tiếp 24/7 với khách hàng.
 
-Để giải quyết triệt để các vấn đề này, dự án **"Hệ thống Quản lý Sân Cầu lông LTV Badminton"** đã được nghiên cứu và phát triển. Đây là một hệ thống ứng dụng web hai phân hệ chuyên sâu (Client - Admin) hoạt động trên nền tảng MERN stack (MongoDB, ExpressJS, ReactJS, NodeJS) nhằm tự động hóa quy trình đặt lịch, quản trị tài chính, nhân sự và nâng cao trải nghiệm thể thao số hóa.
+Để giải quyết triệt để các vấn đề này, dự án **"Hệ thống Quản lý Sân LTV"** đã được nghiên cứu và phát triển. Đây là một hệ thống ứng dụng web hai phân hệ chuyên sâu (Client - Admin) hoạt động trên nền tảng MERN stack (MongoDB, ExpressJS, ReactJS, NodeJS) nhằm tự động hóa quy trình đặt lịch, quản trị tài chính, nhân sự và nâng cao trải nghiệm thể thao số hóa.
 
 ### 1.2. Sứ mệnh (Mission)
 Sứ mệnh của dự án **LTV Badminton** là **"Kết nối thể thao - Nâng tầm trải nghiệm bằng công nghệ"**. Hệ thống hướng tới việc xóa bỏ mọi rào cản địa lý và quy trình thủ công phức tạp trong đặt sân thể thao, giúp khách hàng tiếp cận dịch vụ đặt sân chuyên nghiệp chỉ bằng vài lượt chạm trên mọi thiết bị di động. Đồng thời, hệ thống cung cấp cho nhà quản trị một công cụ quản lý số hóa toàn diện, nâng cao năng suất vận hành và tối đa hóa hiệu suất sử dụng cơ sở vật chất.
 
 ### 1.3. Tầm nhìn (Vision)
-Tầm nhìn đến năm 2030, **LTV Badminton** định hướng trở thành giải pháp công nghệ quản trị sân thể thao đa năng hàng đầu khu vực miền Trung - Tây Nguyên. Hệ thống không chỉ dừng lại ở đặt sân cầu lông mà còn có khả năng mở rộng sang nhiều bộ môn thể thao khác, tiên phong tích hợp trí tuệ nhân tạo (AI Assistant) nhằm tạo nên một hệ sinh thái thể thao số thông minh, cá nhân hóa trải nghiệm khách hàng tối đa và thúc đẩy phong trào thể dục thể thao cộng đồng phát triển bền vững.
+Tầm nhìn đến năm 2030, **LTV** định hướng trở thành giải pháp công nghệ quản trị sân thể thao đa năng hàng đầu khu vực miền Trung - Tây Nguyên. Hệ thống có khả năng mở rộng sang nhiều bộ môn thể thao khác nhau, tiên phong tích hợp trí tuệ nhân tạo (AI Assistant) nhằm tạo nên một hệ sinh thái thể thao số thông minh, cá nhân hóa trải nghiệm khách hàng tối đa và thúc đẩy phong trào thể dục thể thao cộng đồng phát triển bền vững.
 
 ### 1.4. Mục tiêu chiến lược (Objectives)
 Dự án được triển khai nhằm đạt được các mục tiêu cốt lõi sau:
@@ -55,7 +55,7 @@ graph TD
 ### 2.2. Quản lý Câu lạc bộ (Manager)
 Đóng vai trò điều hành trực tiếp mọi hoạt động hàng ngày tại CLB (định nghĩa trong Schema `User` với `role: "manager"`).
 *   **Trách nhiệm chính:**
-    *   Quản lý danh sách sân bãi, cập nhật đơn giá, hình ảnh sân cầu lông.
+    *   Quản lý danh sách sân bãi, cập nhật đơn giá, hình ảnh sân.
     *   Thực hiện phân ca làm việc (`shift`) và ghi nhận mức lương (`salary`) cho đội ngũ nhân viên trực sân.
     *   Theo dõi và giám sát chất lượng dịch vụ thông qua đánh giá và phản hồi của khách hàng (Review & Feedback).
     *   Hỗ trợ giải quyết các khiếu nại hoặc tranh chấp về lịch đặt sân.
@@ -85,7 +85,7 @@ Là đối tượng thụ hưởng dịch vụ đặt sân trực tuyến của 
 Dự án LTV Badminton cung cấp một giải pháp dịch vụ khép kín từ đời thực lên không gian số, bao gồm dịch vụ cho thuê cơ sở vật chất sân bãi và hệ thống phần mềm quản lý thông minh.
 
 ### 3.1. Dịch vụ cốt lõi tại sân (Offline Services)
-*   **Dịch vụ cho thuê sân cầu lông theo giờ:** Cung cấp hệ thống sân thảm PVC đạt tiêu chuẩn thi đấu quốc tế, ánh sáng chống lóa mắt, phục vụ từ 05:00 đến 22:00 hàng ngày.
+*   **Dịch vụ cho thuê sân thể thao theo giờ:** Cung cấp hệ thống sân tiêu chuẩn, ánh sáng chống lóa mắt, phục vụ từ 05:00 đến 22:00 hàng ngày.
 *   **Dịch vụ đặt sân định kỳ:** Hỗ trợ các cơ quan, đoàn thể hoặc các nhóm lông thủ đặt sân cố định theo tuần/tháng với mức giá ưu đãi và giữ sân cố định.
 *   **Dịch vụ bổ trợ chuyên nghiệp:** Cung cấp dịch vụ cho thuê vợt, bán cầu lông, các loại nước giải khát, đồ ăn nhẹ và các dịch vụ căng vợt lấy ngay tại quầy.
 
@@ -102,7 +102,7 @@ Mã nguồn hệ thống được cấu trúc rõ ràng thành 3 phân hệ chí
     *   Cho phép khách hàng chụp và tải lên hình ảnh biên lai chuyển khoản ngân hàng (`paymentImage`). Biên lai này được lưu trữ và hiển thị trực tiếp cho Ban quản lý để làm minh chứng phê duyệt, bảo đảm quy trình tài chính minh bạch.
 4.  **Trợ lý ảo AI thông minh (LTV AI Assistant - Gemini API):**
     *   Đây là tính năng đột phá của hệ thống. Trợ lý ảo AI sử dụng API trí tuệ nhân tạo thế hệ mới của Google (Gemini) được huấn luyện để hiểu sâu sắc về dịch vụ của LTV Badminton. 
-    *   AI có thể tư vấn giá sân, giờ mở cửa, cách thức thanh toán cọc, hướng dẫn kỹ thuật chơi cầu lông và giải đáp các câu hỏi tự do của người dùng với tốc độ phản hồi cực nhanh và văn phong thân thiện.
+    *   AI có thể tư vấn giá sân, giờ mở cửa, cách thức thanh toán cọc, hướng dẫn và giải đáp các câu hỏi tự do của người dùng với tốc độ phản hồi cực nhanh và văn phong thân thiện.
 5.  **Hộp thư liên hệ & Đánh giá (Review & Contact Page):**
     *   Hỗ trợ khách hàng gửi phản ánh dịch vụ trực tiếp thông qua form `ContactPage`, tự động đẩy dữ liệu về backend xử lý. Khách hàng còn có thể để lại số sao đánh giá (`avgRating`, `reviewCount`) trực tiếp trên từng sân.
 

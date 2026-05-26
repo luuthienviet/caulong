@@ -3,7 +3,7 @@ import express from 'express';
 const router = express.Router();
 
 // System prompt chứa toàn bộ kiến thức về sân cầu lông LTV
-const SYSTEM_PROMPT = `Bạn là Trợ lý ảo AI thông minh của **LTV BADMINTON** — hệ thống quản lý và đặt sân cầu lông chuyên nghiệp.
+const SYSTEM_PROMPT = `Bạn là Trợ lý ảo AI thông minh của **LTV COURT** — hệ thống quản lý và đặt sân chuyên nghiệp (đa dạng các loại sân thể thao).
 
 ===== THÔNG TIN CƠ SỞ =====
 • Tên: LTV BADMINTON (trước đây là Kontum Badminton)
@@ -22,7 +22,7 @@ const SYSTEM_PROMPT = `Bạn là Trợ lý ảo AI thông minh của **LTV BADMI
 • Thuê vợt: 20.000 đ/cây
 • Thuê giày chuyên dụng: 20.000 đ/đôi (size 36-45)
 • Căng vợt điện tử chuyên nghiệp tại quầy
-• Nước uống, cầu lông (Hải Yến, Thành Công) bán tại quầy
+• Nước uống, bóng, cầu, và các phụ kiện thể thao bán tại quầy
 • Yêu cầu: Sân VIP bắt buộc mang giày đế gum (non-marking)
 
 ===== CÁCH ĐẶT SÂN =====
@@ -52,8 +52,8 @@ const SYSTEM_PROMPT = `Bạn là Trợ lý ảo AI thông minh của **LTV BADMI
 ===== QUY TẮC TRẢ LỜI =====
 1. Trả lời bằng tiếng Việt, thân thiện, chuyên nghiệp.
 2. Sử dụng emoji phù hợp để tạo cảm giác sinh động.
-3. Nếu câu hỏi liên quan đến sân cầu lông, sử dụng kiến thức ở trên.
-4. Nếu câu hỏi KHÔNG liên quan đến sân cầu lông (ví dụ: toán học, lịch sử, khoa học, cuộc sống, v.v.), bạn VẪN trả lời bình thường như một AI thông minh đa năng, không từ chối.
+3. Nếu câu hỏi liên quan đến sân, sử dụng kiến thức ở trên.
+4. Nếu câu hỏi KHÔNG liên quan đến sân (ví dụ: toán học, lịch sử, khoa học, cuộc sống, v.v.), bạn VẪN trả lời bình thường như một AI thông minh đa năng, không từ chối.
 5. Giữ câu trả lời ngắn gọn, súc tích nhưng đầy đủ (tối đa 400 từ).
 6. Khi trả lời về giá hoặc thông tin sân, luôn dùng format danh sách rõ ràng.
 7. Sử dụng **in đậm** cho thông tin quan trọng.`;
@@ -200,12 +200,12 @@ function generateLocalResponse(rawInput) {
     return `🔄 **CHÍNH SÁCH HỦY/ĐỔI:**\n• Trước 24h: Hoàn **100%**\n• Trước 12h: Hoàn **50%**\n• Dưới 12h: Không hoàn\n• Đổi giờ miễn phí nếu báo trước 12h\n\n📞 Gọi ngay **0339 310 915** để xử lý!`;
   }
 
-  if (/\b(luat choi|luat cau long|tinh diem|giao cau|kich thuoc san)\b/.test(input)) {
-    return `🏸 **LUẬT CẦU LÔNG CƠ BẢN (BWF):**\n• 3 séc, mỗi séc chạm 21 điểm\n• Điểm chẵn: giao từ phải, Điểm lẻ: giao từ trái\n• Vợt phải chạm cầu dưới 1.15m\n• Sân đôi: 6.1m x 13.4m, Sân đơn: 5.18m x 13.4m\n• Lưới cao 1.524m ở giữa`;
+  if (/\b(luat choi|luat the thao|tinh diem|giao cau|kich thuoc san)\b/.test(input)) {
+    return `⚽ **LUẬT THỂ THAO CƠ BẢN:**\n• Tuỳ từng bộ môn có luật và thời gian thi đấu riêng.\n• Vui lòng liên hệ quản lý sân để được tư vấn chi tiết bộ môn bạn quan tâm.`;
   }
 
-  if (/\b(giay|vot|cho thue|nuoc uong|cang vot)\b/.test(input)) {
-    return `👟 **DỊCH VỤ TẠI SÂN:**\n• Thuê vợt: **20.000 đ/cây**\n• Thuê giày: **20.000 đ/đôi** (size 36-45)\n• Căng vợt điện tử chuyên nghiệp\n• Nước uống & cầu lông bán tại quầy\n\n⚠️ Sân VIP bắt buộc giày đế gum!`;
+  if (/\b(giay|vot|cho thue|nuoc uong|bong|dung cu)\b/.test(input)) {
+    return `👟 **DỊCH VỤ TẠI SÂN:**\n• Thuê dụng cụ: **20.000 đ/món**\n• Thuê giày: **20.000 đ/đôi** (size 36-45)\n• Nước uống & phụ kiện thể thao bán tại quầy\n\n⚠️ Sân VIP bắt buộc giày thể thao chuyên dụng!`;
   }
 
   if (/\b(giao luu|giai dau|to chuc|clb|ghep doi)\b/.test(input)) {
@@ -213,11 +213,11 @@ function generateLocalResponse(rawInput) {
   }
 
   if (/\b(cam on|thank|thanks|great|tot qua|tuyet voi)\b/.test(input)) {
-    return '💖 Rất vui vì đã giúp được bạn! Chúc bạn có những giờ chơi cầu lông thật tuyệt vời tại **LTV BADMINTON**! 🏸';
+    return '💖 Rất vui vì đã giúp được bạn! Chúc bạn có những giờ chơi thể thao thật tuyệt vời tại **LTV COURT**! 🏸';
   }
 
   if (/\b(tam biet|bye|hen gap lai)\b/.test(input)) {
-    return '👋 Tạm biệt bạn! Hẹn sớm gặp lại tại sân cầu lông. Nếu cần hỗ trợ, bạn cứ nhắn tôi bất cứ lúc nào nhé! 😊';
+    return '👋 Tạm biệt bạn! Hẹn sớm gặp lại tại sân. Nếu cần hỗ trợ, bạn cứ nhắn tôi bất cứ lúc nào nhé! 😊';
   }
 
   // Fallback khi không khớp bất kỳ pattern nào
@@ -228,8 +228,8 @@ function generateLocalResponse(rawInput) {
          `• 💳 **"Thanh toán?"** — QR, Momo, tiền mặt\n` +
          `• 📍 **"Địa chỉ?"** — Vị trí & liên hệ\n` +
          `• 🔄 **"Hủy/đổi lịch?"** — Chính sách hoàn tiền\n` +
-         `• 🏸 **"Luật cầu lông?"** — Luật chơi cơ bản\n` +
-         `• 👟 **"Dịch vụ?"** — Thuê vợt, giày, nước uống\n\n` +
+         `• ⚽ **"Luật thể thao?"** — Luật chơi cơ bản\n` +
+         `• 👟 **"Dịch vụ?"** — Thuê dụng cụ, giày, nước uống\n\n` +
          `📞 Hoặc gọi Hotline: **0339 310 915**`;
 }
 

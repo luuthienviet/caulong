@@ -19,6 +19,28 @@ import ContactPage from "./pages/ContactPage";
 import ChatBot from "./components/chatbot/ChatBot";
 import UtilityShop from "./components/shop/UtilityShop";
 import MembershipPage from "./pages/MembershipPage";
+import SportsCategoryPage from './pages/SportsCategoryPage';
+
+const allLanguages = [
+  { code: 'en', name: 'English', flag: 'gb' },
+  { code: 'ar', name: 'Arabic', flag: 'sa' },
+  { code: 'da', name: 'Danish', flag: 'dk' },
+  { code: 'de', name: 'German', flag: 'de' },
+  { code: 'es', name: 'Spanish', flag: 'es' },
+  { code: 'fr', name: 'French', flag: 'fr' },
+  { code: 'id', name: 'Indonesian', flag: 'id' },
+  { code: 'it', name: 'Italian', flag: 'it' },
+  { code: 'ja', name: 'Japanese', flag: 'jp' },
+  { code: 'nl', name: 'Dutch', flag: 'nl' },
+  { code: 'pl', name: 'Polish', flag: 'pl' },
+  { code: 'pt', name: 'Portuguese', flag: 'pt' },
+  { code: 'ro', name: 'Romanian', flag: 'ro' },
+  { code: 'ru', name: 'Russian', flag: 'ru' },
+  { code: 'tr', name: 'Turkish', flag: 'tr' },
+  { code: 'uk', name: 'Ukrainian', flag: 'ua' },
+  { code: 'vi', name: 'Vietnamese', flag: 'vn' },
+  { code: 'zh-CN', name: 'Chinese', flag: 'cn' }
+];
 
 const defaultCourts = [
   { id: 1, name: "SÂN SỐ 01 - VIP", price: 200000, desc: "Sân VIP, thảm Yonex cao cấp, ánh sáng chuẩn thi đấu.", status: "Trống", image: "https://www.alobo.vn/wp-content/uploads/2025/08/image-108.png" },
@@ -52,6 +74,8 @@ const formatCourtData = (items) => {
       desc: typeof c.description === 'string' ? c.description : (typeof c.desc === 'string' ? c.desc : ''),
       status: typeof c.status === 'string' ? c.status : 'Trống',
       image: typeof c.image === 'string' ? c.image : '',
+      sport: c.sport || 'badminton',
+      branch: c.branch || 'kt',
       avgRating: typeof c.avgRating === 'number' ? c.avgRating : 0,
       reviewCount: typeof c.reviewCount === 'number' ? c.reviewCount : 0,
       bookingCount: typeof c.bookingCount === 'number' ? c.bookingCount : 0
@@ -68,6 +92,7 @@ function App() {
   // === STATES ===
   const [page, setPage] = useState(() => localStorage.getItem('user_current_page') || 'home');
   const [courts, setCourts] = useState([]);
+  const [dbSports, setDbSports] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [paymentProof, setPaymentProof] = useState({});
   const [selectedCourt, setSelectedCourt] = useState(() => {
@@ -90,6 +115,17 @@ function App() {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [avatar, setAvatar] = useState(localStorage.getItem("avatar") || null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  const [currentLangFlag, setCurrentLangFlag] = useState(() => {
+    try {
+      const match = document.cookie.match(/googtrans=\/vi\/([a-zA-Z-]+)/);
+      const code = match ? match[1] : 'en';
+      const lang = allLanguages.find(l => l.code === code);
+      return lang ? lang.flag : 'gb';
+    } catch (e) {
+      return 'gb';
+    }
+  });
   const [showNotification, setShowNotification] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState(() => localStorage.getItem('user_selected_booking_id') || null);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -140,6 +176,15 @@ function App() {
     }
   };
 
+  const fetchSports = async () => {
+    try {
+      const res = await API.get('/sports');
+      setDbSports(res.data);
+    } catch (err) {
+      console.error('Lỗi lấy môn thể thao:', err);
+    }
+  };
+
   // === REFRESH POINTS FROM SERVER ===
   const refreshUserPoints = async () => {
     if (!localStorage.getItem('token')) return;
@@ -155,6 +200,7 @@ function App() {
 
   useEffect(() => {
     fetchCourts();
+    fetchSports();
     fetchSchedules();
     refreshUserPoints(); // sync fresh points from DB on page load
   }, []);
@@ -228,6 +274,7 @@ function App() {
 
   const headerItems = [
     { label: '🏠 TRANG CHỦ', page: 'home', visible: true },
+    { label: '🏆 THỂ LOẠI MÔN', page: 'sports-category', visible: true },
     { label: '🔎 TRA CỨU ĐƠN', page: 'order-lookup', visible: !user },
     { label: '📋 LỊCH ĐẶT SÂN', page: 'my-bookings', visible: true },
     { label: '🛒 CỬA HÀNG', page: 'shop', visible: true },
@@ -422,6 +469,13 @@ function App() {
       await API.delete(`/notifications/${id}`);
       setUserNotifications(prev => prev.filter(n => n._id !== id));
     } catch (err) { console.error(err); }
+  };
+
+  const changeLanguage = (langCode) => {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (30 * 24 * 60 * 60 * 1000));
+    document.cookie = `googtrans=/vi/${langCode};expires=${expires.toUTCString()};path=/`;
+    window.location.reload();
   };
 
   const fetchAIRecommendation = async () => {
@@ -656,6 +710,7 @@ function App() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".user-avatar-wrapper")) setShowUserMenu(false);
+      if (!event.target.closest(".lang-selector-wrapper")) setShowLangMenu(false);
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
@@ -739,10 +794,10 @@ function App() {
         maxWidth: '100%'
       }}>
         <h1 style={{ color: '#fff', textAlign: 'center', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, textShadow: '2px 4px 10px rgba(0,0,0,0.5)', margin: 0, letterSpacing: '2px' }}>
-          LTV <span style={{ color: '#4cc9f0' }}>BADMINTON</span>
+          LTV <span style={{ color: '#4cc9f0' }}>COURT</span>
         </h1>
         <p style={{ color: '#f8f9fa', fontSize: 'clamp(1rem, 2vw, 1.4rem)', textAlign: 'center', maxWidth: '800px', margin: '20px 0 40px 0', textShadow: '1px 2px 4px rgba(0,0,0,0.5)', fontWeight: 500 }}>
-          Hệ thống sân cầu lông đạt chuẩn quốc gia. Trải nghiệm không gian thể thao đẳng cấp và chuyên nghiệp ngay hôm nay.
+          Hệ thống sân đạt chuẩn quốc gia. Trải nghiệm không gian thể thao đẳng cấp và chuyên nghiệp ngay hôm nay.
         </p>
         <button 
           className="btn-primary pulse" 
@@ -771,7 +826,7 @@ function App() {
         <div className="auth-container">
           <div className="auth-card fade-in">
             <div className="auth-info-side" style={{ backgroundImage: "linear-gradient(135deg, rgba(9, 13, 22, 0.65), rgba(30, 27, 75, 0.85)), url('/smash.jpg')" }}>
-              <div className="auth-logo"><span className="logo-brand">LTV</span> <span>BADMINTON</span></div>
+              <div className="auth-logo"><span className="logo-brand">LTV</span> <span>COURT</span></div>
               <h3>GIA NHẬP CỘNG ĐỒNG</h3>
               <p>Hệ thống quản lý và đặt sân chuyên nghiệp.</p>
               <button className="btn-back-home" onClick={() => setPage('home')}>QUAY LẠI</button>
@@ -796,7 +851,7 @@ function App() {
     <div className="w-full min-h-screen flex flex-col">
       <header className="header">
           <div className="logo" onClick={handleLogoClick}>
-            <span className="logo-brand">LTV</span> <span>BADMINTON</span>
+            <span className="logo-brand">LTV</span> <span>COURT</span>
           </div>
           <nav className="main-nav">
             <ul>
@@ -812,6 +867,32 @@ function App() {
             </ul>
           </nav>
           <div className="header-auth-section">
+            <div className="lang-selector-wrapper" style={{ position: 'relative', marginRight: '16px' }}>
+              <button className="btn-lang" onClick={() => setShowLangMenu(!showLangMenu)} style={{ background: 'transparent', border: '1px solid #4361ee', color: '#4361ee', padding: '4px 12px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <img src={`https://hatscripts.github.io/circle-flags/flags/${currentLangFlag}.svg`} alt="lang" style={{ width: '18px', height: '18px', borderRadius: '50%' }} /> Ngôn ngữ
+              </button>
+              {showLangMenu && (
+                <div className="lang-menu" style={{ 
+                  position: 'absolute', top: '100%', right: 0, marginTop: '10px', 
+                  background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', 
+                  padding: '8px', zIndex: 1000, width: '200px',
+                  maxHeight: '320px', overflowY: 'auto'
+                }}>
+                  {allLanguages.map(lang => (
+                    <div 
+                      key={lang.code}
+                      onClick={() => { changeLanguage(lang.code); setShowLangMenu(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s', marginBottom: '2px' }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <img src={`https://hatscripts.github.io/circle-flags/flags/${lang.flag}.svg`} alt={lang.name} style={{ width: '20px', height: '20px', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} />
+                      <span className="notranslate" style={{ fontSize: '0.95rem', color: '#334155', fontWeight: 600 }}>{lang.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           {isAuthenticated ? (
             <div className="user-avatar-wrapper logged-in-avatar">
               <div style={{ position: 'relative' }}>
@@ -1073,24 +1154,64 @@ function App() {
                 `}</style>
               </section>
             )}
-            <section className="court-section">
-              <div className="court-grid">
-                {courts.map(court => (
-                  <CourtCard
-                    key={court.id}
-                    court={court}
-                    favorites={favorites}
-                    toggleFavorite={(id) => setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])}
-                    onViewCourt={(court) => {
-                      if (!isAuthenticated) { setShowLoginNotice(true); return; }
-                      setSelectedCourt(court);
-                      setPage('court-detail');
-                    }}
-                    userRole={user?.role}
-                  />
-                ))}
-              </div>
-            </section>
+            {dbSports.length > 0 ? (
+              dbSports.map(sport => {
+                const sportCourts = courts.filter(c => c.sport === sport.code).slice(0, 4);
+                if (sportCourts.length === 0) return null;
+                return (
+                  <section className="court-section" key={sport.code} style={{ marginBottom: '40px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', padding: '0 15px' }}>
+                      <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, color: '#1e293b' }}>
+                        <span>{sport.name}</span>
+                      </h2>
+                      <button 
+                        onClick={() => setPage('sports-category')}
+                        style={{ color: '#4361ee', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', borderRadius: '8px' }}
+                        onMouseOver={(e) => e.target.style.background = '#eff6ff'}
+                        onMouseOut={(e) => e.target.style.background = 'none'}
+                      >
+                        Xem tất cả ➔
+                      </button>
+                    </div>
+                    <div className="court-grid">
+                      {sportCourts.map(court => (
+                        <CourtCard
+                          key={court.id || court._id}
+                          court={court}
+                          favorites={favorites}
+                          toggleFavorite={(id) => setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])}
+                          onViewCourt={(court) => {
+                            if (!isAuthenticated) { setShowLoginNotice(true); return; }
+                            setSelectedCourt(court);
+                            setPage('court-detail');
+                          }}
+                          userRole={user?.role}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })
+            ) : (
+              <section className="court-section">
+                <div className="court-grid">
+                  {courts.slice(0, 8).map(court => (
+                    <CourtCard
+                      key={court.id || court._id}
+                      court={court}
+                      favorites={favorites}
+                      toggleFavorite={(id) => setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])}
+                      onViewCourt={(court) => {
+                        if (!isAuthenticated) { setShowLoginNotice(true); return; }
+                        setSelectedCourt(court);
+                        setPage('court-detail');
+                      }}
+                      userRole={user?.role}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         )}
 {page === 'my-bookings' && (
@@ -1176,6 +1297,20 @@ function App() {
         {page === 'map' && <MapPage />}
         {page === 'contact' && <ContactPage />}
         {page === 'shop' && <UtilityShop user={user} />}
+        {page === 'sports-category' && (
+          <SportsCategoryPage
+            courts={courts}
+            sports={dbSports}
+            favorites={favorites}
+            toggleFavorite={(id) => setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])}
+            onViewCourt={(court) => {
+              if (!isAuthenticated) { setShowLoginNotice(true); return; }
+              setSelectedCourt(court);
+              setPage('court-detail');
+            }}
+            userRole={user?.role}
+          />
+        )}
         {page === 'membership' && user?.role === 'user' && (
           <MembershipPage user={user} onRefreshUser={refreshUserPoints} />
         )}
@@ -1188,6 +1323,30 @@ function App() {
           <p>📧 Email: {footerSettings.email}</p>
           <p>🕒 Giờ hoạt động: {footerSettings.hours}</p>
         </footer>
+
+      {/* MOBILE BOTTOM NAVIGATION */}
+      <nav className="mobile-bottom-nav">
+        <div className={`bottom-nav-item ${page === 'home' ? 'active' : ''}`} onClick={() => setPage('home')}>
+          <span className="icon">🏠</span>
+          <span className="label">Trang chủ</span>
+        </div>
+        <div className={`bottom-nav-item ${page === 'sports-category' ? 'active' : ''}`} onClick={() => setPage('sports-category')}>
+          <span className="icon">🏆</span>
+          <span className="label">Sân bãi</span>
+        </div>
+        <div className={`bottom-nav-item ${page === 'my-bookings' || page === 'order-lookup' ? 'active' : ''}`} onClick={() => setPage(user ? 'my-bookings' : 'order-lookup')}>
+          <span className="icon">{user ? '📋' : '🔎'}</span>
+          <span className="label">Lịch đặt</span>
+        </div>
+        <div className={`bottom-nav-item ${page === 'shop' ? 'active' : ''}`} onClick={() => setPage('shop')}>
+          <span className="icon">🛒</span>
+          <span className="label">Cửa hàng</span>
+        </div>
+        <div className={`bottom-nav-item ${page === 'map' ? 'active' : ''}`} onClick={() => setPage('map')}>
+          <span className="icon">🗺️</span>
+          <span className="label">Bản đồ</span>
+        </div>
+      </nav>
 
       {showLoginNotice && (
         <div className="modal-overlay">

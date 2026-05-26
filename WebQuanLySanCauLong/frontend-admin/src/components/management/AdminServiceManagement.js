@@ -198,7 +198,7 @@ export default function AdminServiceManagement({ user }) {
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">🛒 CỬA HÀNG TIỆN ÍCH</p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">Quản lý dịch vụ đi kèm</h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">Quản lý sản phẩm căng tin, đồ uống, phụ kiện cầu lông và dịch vụ thuê vợt/giày ngay tại quầy.</p>
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">Quản lý sản phẩm căng tin, đồ uống, phụ kiện thể thao và dịch vụ thuê đồ/giày ngay tại quầy.</p>
         </div>
         {user?.role !== 'staff' && (
           <button

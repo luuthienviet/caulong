@@ -90,7 +90,7 @@ function DetailPanel({ b, onApprove, onViewBill, onCancel }) {
       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 32px' }}>
         <div>
           <div style={{ fontWeight:800,color:'#4361ee',fontSize:'0.75rem',textTransform:'uppercase',marginBottom:8 }}>📋 Chi tiết đặt sân</div>
-          {[['Sân cầu lông',b.courtName||'—'],['Ngày chơi',b.date||'—'],['Khung giờ',b.hour?`${b.hour}:00 (${b.duration||1}h)`:'—'],['Ghi chú',b.customerNote||'Không có']].map(([k,v])=>row(k,v))}
+          {[['Tên sân',b.courtName||'—'],['Ngày chơi',b.date||'—'],['Khung giờ',b.hour?`${b.hour}:00 (${b.duration||1}h)`:'—'],['Ghi chú',b.customerNote||'Không có']].map(([k,v])=>row(k,v))}
         </div>
         <div>
           <div style={{ fontWeight:800,color:'#4361ee',fontSize:'0.75rem',textTransform:'uppercase',marginBottom:8 }}>💳 Chi tiết giao dịch</div>
@@ -180,10 +180,33 @@ function TxRow({ b, expanded, onToggle, onApprove, onViewBill, onCancel }) {
   );
 }
 
-export default function AdminPaymentManagement({ bookingRequests = [], refreshBookings }) {
+export default function AdminPaymentManagement({ bookingRequests = [], refreshBookings, courts = [] }) {
   const [tab, setTab] = useState('pending');
   const [filterDate, setFilterDate] = useState('');
   const [search, setSearch] = useState('');
+  const [branchFilter, setBranchFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+
+  const branchOptions = [
+    { value: 'all', label: 'Tất cả chi nhánh' },
+    { value: 'kt', label: '📍 LTV Kon Tum' },
+    { value: 'hn', label: '📍 LTV Hà Nội' },
+    { value: 'hcm', label: '📍 LTV TP.HCM' },
+    { value: 'dn', label: '📍 LTV Đà Nẵng' },
+    { value: 'ct', label: '📍 LTV Cần Thơ' },
+    { value: 'hp', label: '📍 LTV Hải Phòng' },
+    { value: 'qn', label: '📍 LTV Quảng Ninh' },
+    { value: 'nt', label: '📍 LTV Nha Trang' },
+    { value: 'dl', label: '📍 LTV Đà Lạt' },
+    { value: 'vt', label: '📍 LTV Vũng Tàu' },
+    { value: 'bd', label: '📍 LTV Bình Dương' },
+    { value: 'dni', label: '📍 LTV Đồng Nai' },
+    { value: 'bn', label: '📍 LTV Bắc Ninh' },
+    { value: 'th', label: '📍 LTV Thanh Hóa' },
+    { value: 'na', label: '📍 LTV Nghệ An' },
+    { value: 'hue', label: '📍 LTV Huế' },
+    { value: 'pq', label: '📍 LTV Phú Quốc' }
+  ];
   const [expandedId, setExpandedId] = useState(null);
   const [billSrc, setBillSrc] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null); // { id, customerName }
@@ -204,25 +227,54 @@ export default function AdminPaymentManagement({ bookingRequests = [], refreshBo
   };
 
   const pending = useMemo(() =>
-    bookingRequests.filter(b => b.status === 'approved' && (b.paymentStatus === 'deposit_sent' || b.paymentStatus === 'pending'))
-      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
-  , [bookingRequests]);
+    bookingRequests.filter(b => {
+      if (!(b.status === 'approved' && (b.paymentStatus === 'deposit_sent' || b.paymentStatus === 'pending'))) return false;
+      const court = courts.find(c => String(c.id || c._id) === String(b.courtId)) || {};
+      const cBranch = court.branch || 'kt';
+      if (branchFilter !== 'all' && cBranch !== branchFilter) return false;
+      return true;
+    }).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+  , [bookingRequests, branchFilter, courts]);
 
   const history = useMemo(() => {
-    let list = bookingRequests.filter(b => b.paymentStatus === 'paid' || b.paymentStatus === 'remaining_paid' || b.status === 'rejected');
+    let list = bookingRequests.filter(b => {
+      if (!(b.paymentStatus === 'paid' || b.paymentStatus === 'remaining_paid' || b.status === 'rejected')) return false;
+      const court = courts.find(c => String(c.id || c._id) === String(b.courtId)) || {};
+      const cBranch = court.branch || 'kt';
+      if (branchFilter !== 'all' && cBranch !== branchFilter) return false;
+      return true;
+    });
     if (filterDate) list = list.filter(b => fmtDate(b.createdAt) === filterDate || b.date === filterDate);
     if (search.trim()) { const s = search.trim().toLowerCase(); list = list.filter(b => String(b._id).toLowerCase().includes(s) || (b.userId?.username||b.customerName||'').toLowerCase().includes(s) || (b.customerPhone||'').includes(s) || (b.courtName||'').toLowerCase().includes(s)); }
+    
+    if (paymentMethodFilter !== 'all') {
+      list = list.filter(b => {
+        const method = methodLabel(b.paymentMethod);
+        if (paymentMethodFilter === 'cash' && method === 'Tiền mặt') return true;
+        if (paymentMethodFilter === 'online' && method === 'Chuyển khoản') return true;
+        return false;
+      });
+    }
+
     return list.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [bookingRequests, filterDate, search]);
+  }, [bookingRequests, filterDate, search, branchFilter, paymentMethodFilter, courts]);
 
   const displayed = tab === 'pending' ? pending : history;
 
-  const stats = useMemo(() => ({
-    pendingCount: pending.length,
-    billCount: pending.filter(b => b.paymentStatus === 'deposit_sent').length,
-    todayPaid: bookingRequests.filter(b => b.paymentStatus === 'paid' && fmtDate(b.updatedAt) === fmtDate(new Date().toISOString())).length,
-    totalPaid: bookingRequests.filter(b => b.paymentStatus === 'paid').reduce((s,b) => s+(b.total||0), 0),
-  }), [pending, bookingRequests]);
+  const stats = useMemo(() => {
+    const branchFilteredAll = bookingRequests.filter(b => {
+      const court = courts.find(c => String(c.id || c._id) === String(b.courtId)) || {};
+      const cBranch = court.branch || 'kt';
+      if (branchFilter !== 'all' && cBranch !== branchFilter) return false;
+      return true;
+    });
+    return {
+      pendingCount: pending.length,
+      billCount: pending.filter(b => b.paymentStatus === 'deposit_sent').length,
+      todayPaid: branchFilteredAll.filter(b => b.paymentStatus === 'paid' && fmtDate(b.updatedAt) === fmtDate(new Date().toISOString())).length,
+      totalPaid: branchFilteredAll.filter(b => b.paymentStatus === 'paid').reduce((s,b) => s+(b.total||0), 0),
+    };
+  }, [pending, bookingRequests, branchFilter, courts]);
 
   const TABS = [
     { key:'pending', label:'⏳ Chờ duyệt', count:stats.pendingCount, color:'#f59e0b' },
@@ -254,14 +306,20 @@ export default function AdminPaymentManagement({ bookingRequests = [], refreshBo
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex',gap:8,marginBottom:20 }}>
-        {TABS.map(t => (
-          <button key={t.key} onClick={()=>{setTab(t.key);setExpandedId(null);}}
-            style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 20px',borderRadius:99,border:'1.5px solid',borderColor:tab===t.key?t.color:'#e2e8f0',background:tab===t.key?t.color:'#fff',color:tab===t.key?'#fff':'#64748b',fontWeight:700,fontSize:'0.85rem',cursor:'pointer',transition:'all .15s' }}>
-            {t.label}
-            {t.count > 0 && <span style={{ background:tab===t.key?'rgba(255,255,255,.25)':'#f1f5f9',color:tab===t.key?'#fff':'#475569',borderRadius:99,padding:'1px 7px',fontSize:'0.72rem',fontWeight:800 }}>{t.count}</span>}
-          </button>
-        ))}
+      <div style={{ display:'flex',gap:16,marginBottom:20,flexWrap:'wrap',alignItems:'center',justifyContent:'space-between' }}>
+        <div style={{ display:'flex',gap:8 }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={()=>{setTab(t.key);setExpandedId(null);}}
+              style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 20px',borderRadius:99,border:'1.5px solid',borderColor:tab===t.key?t.color:'#e2e8f0',background:tab===t.key?t.color:'#fff',color:tab===t.key?'#fff':'#64748b',fontWeight:700,fontSize:'0.85rem',cursor:'pointer',transition:'all .15s' }}>
+              {t.label}
+              {t.count > 0 && <span style={{ background:tab===t.key?'rgba(255,255,255,.25)':'#f1f5f9',color:tab===t.key?'#fff':'#475569',borderRadius:99,padding:'1px 7px',fontSize:'0.72rem',fontWeight:800 }}>{t.count}</span>}
+            </button>
+          ))}
+        </div>
+        <select value={branchFilter} onChange={e=>setBranchFilter(e.target.value)}
+          style={{ padding:'10px 18px',borderRadius:99,border:'1.5px solid #e2e8f0',background:'#fff',color:'#0f172a',fontWeight:700,fontSize:'0.85rem',outline:'none',cursor:'pointer',minWidth:200 }}>
+          {branchOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
       </div>
 
       {/* History filters */}
@@ -278,6 +336,14 @@ export default function AdminPaymentManagement({ bookingRequests = [], refreshBo
             <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm theo khách, sân, SĐT, mã đơn..."
               style={{ border:'none',background:'transparent',fontWeight:600,color:'#0f172a',fontSize:'0.85rem',outline:'none',width:'100%' }} />
             {search && <button onClick={()=>setSearch('')} style={{ background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontWeight:900 }}>✕</button>}
+          </div>
+          <div style={{ display:'flex',alignItems:'center',background:'#f8faff',border:'1.5px solid #c7d2fe',borderRadius:12,padding:'8px 14px' }}>
+            <select value={paymentMethodFilter} onChange={e=>setPaymentMethodFilter(e.target.value)}
+              style={{ border:'none',background:'transparent',fontWeight:700,color:'#0f172a',fontSize:'0.85rem',outline:'none',cursor:'pointer' }}>
+              <option value="all">Tất cả thanh toán</option>
+              <option value="online">💳 Chuyển khoản online</option>
+              <option value="cash">💵 Tiền mặt</option>
+            </select>
           </div>
           {filterDate && (
             <div style={{ background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:10,padding:'8px 16px',fontSize:'0.82rem',fontWeight:700,color:'#16a34a' }}>

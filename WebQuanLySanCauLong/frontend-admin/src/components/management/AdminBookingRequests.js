@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import API from "../../api";
 import { 
   Check, 
@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
+import CustomSelect from "../common/CustomSelect";
 
 export default function AdminBookingRequests({
   bookingRequests = [],
@@ -42,8 +43,11 @@ export default function AdminBookingRequests({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending"); // Default to pending
+  const [sportFilter, setSportFilter] = useState("all");
+  const [branchFilter, setBranchFilter] = useState("all");
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, etc.
   const [hoveredCell, setHoveredCell] = useState(null); // format: `${court.id}-${hour}`
+  const [expandedCourtId, setExpandedCourtId] = useState(null); // Accordion state
 
   const today = new Date().toISOString().split("T")[0];
   const date = selectedDate || today;
@@ -51,6 +55,39 @@ export default function AdminBookingRequests({
   const safeCourts = Array.isArray(courts) ? courts.filter(c => c && c.id) : [];
 
   const pendingCount = bookingRequests.filter(b => b.status === "pending").length;
+
+  const [dbSports, setDbSports] = useState([]);
+  useEffect(() => {
+    API.get('/sports')
+      .then(res => setDbSports(res.data))
+      .catch(err => console.error('Error fetching sports:', err));
+  }, []);
+
+  const sportOptions = [
+    { value: 'all', label: 'Tất cả môn', icon: '' },
+    ...dbSports.map(s => ({ value: s.code, label: s.name, icon: s.icon }))
+  ];
+
+  const branchOptions = [
+    { value: 'all', label: 'Tất cả chi nhánh' },
+    { value: 'kt', label: '📍 LTV Kon Tum' },
+    { value: 'hn', label: '📍 LTV Hà Nội' },
+    { value: 'hcm', label: '📍 LTV TP.HCM' },
+    { value: 'dn', label: '📍 LTV Đà Nẵng' },
+    { value: 'ct', label: '📍 LTV Cần Thơ' },
+    { value: 'hp', label: '📍 LTV Hải Phòng' },
+    { value: 'qn', label: '📍 LTV Quảng Ninh' },
+    { value: 'nt', label: '📍 LTV Nha Trang' },
+    { value: 'dl', label: '📍 LTV Đà Lạt' },
+    { value: 'vt', label: '📍 LTV Vũng Tàu' },
+    { value: 'bd', label: '📍 LTV Bình Dương' },
+    { value: 'dni', label: '📍 LTV Đồng Nai' },
+    { value: 'bn', label: '📍 LTV Bắc Ninh' },
+    { value: 'th', label: '📍 LTV Thanh Hóa' },
+    { value: 'na', label: '📍 LTV Nghệ An' },
+    { value: 'hue', label: '📍 LTV Huế' },
+    { value: 'pq', label: '📍 LTV Phú Quốc' }
+  ];
 
   // Helper to generate days of the week based on weekOffset
   const weekDays = useMemo(() => {
@@ -156,6 +193,12 @@ export default function AdminBookingRequests({
   const filteredRequests = useMemo(() => {
     const query = normalizeText(searchQuery);
     return bookingRequests.filter((req) => {
+      const court = courts.find(c => String(c.id || c._id) === String(req.courtId)) || {};
+      const cSport = court.sport || 'badminton';
+      const cBranch = court.branch || 'kt';
+      if (sportFilter !== 'all' && cSport !== sportFilter) return false;
+      if (branchFilter !== 'all' && cBranch !== branchFilter) return false;
+
       const statusKey = getStatusKey(req);
       const matchesStatus = statusFilter === "all" || statusKey === statusFilter;
       const matchesSearch = !query || [
@@ -166,7 +209,7 @@ export default function AdminBookingRequests({
       ].some((value) => normalizeText(value).includes(query));
       return matchesStatus && matchesSearch;
     });
-  }, [bookingRequests, searchQuery, statusFilter]);
+  }, [bookingRequests, searchQuery, statusFilter, sportFilter, branchFilter, courts]);
 
   const calculatePrice = (court, hour, duration) => {
     if (!court || hour == null) return 0;
@@ -174,6 +217,16 @@ export default function AdminBookingRequests({
     const pricePerHour = h >= 17 ? Math.floor(court.price * 1.3) : court.price;
     return pricePerHour * duration;
   };
+
+  const filteredWalkInCourts = useMemo(() => {
+    return safeCourts.filter(court => {
+      const cSport = court.sport || 'badminton';
+      const cBranch = court.branch || 'kt';
+      if (sportFilter !== 'all' && cSport !== sportFilter) return false;
+      if (branchFilter !== 'all' && cBranch !== branchFilter) return false;
+      return true;
+    });
+  }, [safeCourts, sportFilter, branchFilter]);
 
   const handleSlotClick = (court, hour) => {
     const booking = getSlotBooking(court, hour);
@@ -284,6 +337,19 @@ export default function AdminBookingRequests({
               />
             </div>
             <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+              <select
+                value={branchFilter}
+                onChange={e => setBranchFilter(e.target.value)}
+                className="rounded-xl px-3 py-2 text-xs font-bold text-slate-700 bg-white border-none shadow-sm outline-none cursor-pointer"
+              >
+                {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+              <CustomSelect
+                value={sportFilter}
+                onChange={e => setSportFilter(e.target.value)}
+                options={sportOptions}
+              />
+              <div className="w-px h-6 bg-slate-300 self-center mx-1"></div>
               {[
                 { key: "pending", label: "Chờ duyệt" },
                 { key: "approved", label: "Đã xác nhận" },
@@ -497,6 +563,23 @@ export default function AdminBookingRequests({
                   {date.split("-").reverse().join("/")}
                 </span>
               </p>
+              
+              <div className="flex items-center gap-2 md:ml-4 md:border-l md:border-slate-700 md:pl-4">
+                <select
+                  value={branchFilter}
+                  onChange={e => setBranchFilter(e.target.value)}
+                  className="bg-slate-800 text-slate-200 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-slate-700"
+                >
+                  {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                <div className="bg-slate-800 rounded-lg" style={{minWidth: '130px'}}>
+                  <CustomSelect
+                    value={sportFilter}
+                    onChange={e => setSportFilter(e.target.value)}
+                    options={sportOptions}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Premium Center Weekday Selector Track */}
@@ -544,120 +627,110 @@ export default function AdminBookingRequests({
             </div>
           </div>
 
-          {/* Schedule Grid (Clean, Spacious, Elegant) */}
-          {safeCourts.length === 0 ? (
+          {/* Modern Accordion Schedule (Clean, Compact, Elegant) */}
+          {filteredWalkInCourts.length === 0 ? (
             <div className="bg-white p-16 text-center rounded-3xl border border-slate-200 shadow-sm text-slate-400 font-semibold">
-              Không tìm thấy sân thi đấu hoạt động nào trên hệ thống.
+              Không tìm thấy sân thi đấu hoạt động nào trên hệ thống theo tiêu chí lọc này.
             </div>
           ) : (
-            <div className="bg-white rounded-[32px] border border-slate-200/80 shadow-md overflow-hidden">
-              <div className="overflow-x-auto">
-                <div
-                  className="grid min-w-[800px]"
-                  style={{
-                    gridTemplateColumns: `100px repeat(${safeCourts.length}, minmax(160px, 1fr))`,
-                  }}
-                >
-                  {/* Grid Header Corner - Sticky Left */}
-                  <div className="bg-slate-50 p-5 text-center font-bold text-xs uppercase text-slate-400 border-b border-r border-slate-200 flex flex-col items-center justify-center min-h-[75px] sticky left-0 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
-                    <Clock size={14} className="mb-1 text-slate-450" />
-                    <span className="font-extrabold tracking-wider">GIỜ</span>
-                  </div>
-                  
-                  {/* Grid Headers for Courts */}
-                  {safeCourts.map((court) => (
+            <div className="space-y-4">
+              {filteredWalkInCourts.map((court) => {
+                const cid = court.id || court._id;
+                const isExpanded = expandedCourtId === cid;
+                
+                return (
+                  <div key={cid} className="bg-white rounded-[24px] border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                    {/* Court Header - Accordion Toggle */}
                     <div
-                      key={court.id}
-                      className="bg-slate-50 p-4 text-center border-b border-r border-slate-200 flex items-center justify-center flex-col min-h-[75px]"
+                      onClick={() => setExpandedCourtId(isExpanded ? null : cid)}
+                      className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
                     >
-                      <span className="font-black text-slate-800 text-sm tracking-wide uppercase">
-                        {court.name}
-                      </span>
-                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 mt-1">
-                        {court.price.toLocaleString()} VNĐ / h
-                      </span>
-                    </div>
-                  ))}
-
-                  {/* Grid Rows for Hours */}
-                  {scheduleHours.map((hour) => (
-                    <React.Fragment key={hour}>
-                      {/* Hour Indicator - Sticky Left */}
-                      <div className="p-4 text-center border-b border-r border-slate-200 bg-slate-50 text-sm font-extrabold text-slate-500 flex items-center justify-center min-h-[75px] sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
-                        {String(hour).padStart(2, "0")}:00
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center text-emerald-600 border border-emerald-100/50 shadow-sm">
+                          <span className="text-xl">🏟️</span>
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-slate-800 text-lg uppercase tracking-wide">{court.name}</h4>
+                          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg mt-1 inline-block">
+                            {court.price.toLocaleString()} VNĐ / giờ
+                          </span>
+                        </div>
                       </div>
-                      
-                      {/* Court Slots */}
-                      {safeCourts.map((court) => {
-                        const booking = getSlotBooking(court, hour);
-                        const style = getSlotStyle(booking, hour, date);
-                        const isSelected =
-                          quickBooking &&
-                          String(quickBooking.court.id) === String(court.id) &&
-                          quickBooking.hour === String(hour).padStart(2, "0") &&
-                          quickBooking.date === date;
-                        const cellId = `${court.id}-${hour}`;
-                        const isCellHovered = hoveredCell === cellId;
+                      <div className={`w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 transition-transform duration-300 shadow-sm ${isExpanded ? 'rotate-180 bg-slate-100' : ''}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                      </div>
+                    </div>
 
-                        return (
-                          <button
-                            key={cellId}
-                            type="button"
-                            disabled={!style.clickable}
-                            onClick={() => style.clickable && handleSlotClick(court, hour)}
-                            onMouseEnter={() => style.clickable && setHoveredCell(cellId)}
-                            onMouseLeave={() => setHoveredCell(null)}
-                            className={`border-b border-r border-slate-200 p-2 min-h-[75px] flex items-center justify-center transition-all ${
-                              style.clickable ? "cursor-pointer bg-white" : "cursor-default bg-slate-50/20"
-                            } ${
-                              isSelected
-                                ? "bg-blue-50/60"
-                                : isCellHovered
-                                ? "bg-emerald-50/40"
-                                : ""
-                            }`}
-                          >
-                            {booking ? (
-                              // Render a highly premium booked card with a solid left accent border
-                              <div className={`w-full h-full min-h-[55px] p-2.5 rounded-2xl text-left border flex flex-col justify-between shadow-sm transition-all duration-200 ${style.bg}`}>
-                                <div className="font-extrabold text-xs text-slate-850 truncate flex items-center gap-1.5">
-                                  <User size={11} className="text-slate-400 flex-shrink-0" />
-                                  <span className="truncate">{booking.customerName || booking.userId?.name || booking.userId?.username || "Khách"}</span>
+                    {/* Expanded Content - Time Slots Grid */}
+                    {isExpanded && (
+                      <div className="p-6 border-t border-slate-100 bg-slate-50/50 animate-in slide-in-from-top-2 duration-200">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+                          {scheduleHours.map((hour) => {
+                            const booking = getSlotBooking(court, hour);
+                            const style = getSlotStyle(booking, hour, date);
+                            const isSelected =
+                              quickBooking &&
+                              String(quickBooking.court.id) === String(cid) &&
+                              quickBooking.hour === String(hour).padStart(2, "0") &&
+                              quickBooking.date === date;
+
+                            return (
+                              <button
+                                key={hour}
+                                type="button"
+                                disabled={!style.clickable}
+                                onClick={() => style.clickable && handleSlotClick(court, hour)}
+                                className={`relative p-3.5 rounded-2xl border text-left flex flex-col gap-2 transition-all min-h-[90px] w-full ${
+                                  style.clickable
+                                    ? "cursor-pointer bg-white hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5"
+                                    : "cursor-default opacity-80"
+                                } ${
+                                  isSelected
+                                    ? "bg-blue-50 border-blue-400 ring-4 ring-blue-100/50 shadow-sm scale-105 z-10"
+                                    : style.isPast
+                                    ? "bg-slate-100/50 border-slate-200"
+                                    : "border-slate-200 shadow-sm"
+                                }`}
+                              >
+                                <div className="flex justify-between items-center w-full">
+                                  <div className="font-black text-slate-800 text-sm bg-slate-100 px-2 py-0.5 rounded-md">
+                                    {String(hour).padStart(2, "0")}:00
+                                  </div>
                                 </div>
-                                <div className="flex items-center justify-between mt-2.5 text-[9px] font-black uppercase tracking-wider opacity-85">
-                                  <span className="px-1.5 py-0.5 bg-white/70 rounded-md border border-slate-200/50">{style.label}</span>
-                                  <span className="font-extrabold text-slate-500">{String(booking.hour).padStart(2, "0")}:00-{String(parseInt(booking.hour) + (booking.duration || 1)).padStart(2, "0")}:00</span>
-                                </div>
-                              </div>
-                            ) : isSelected ? (
-                              // Render selected state
-                              <div className="w-full h-full min-h-[55px] p-2.5 rounded-2xl bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center gap-1 shadow-md scale-102 shadow-blue-200 animate-in zoom-in-95 duration-100">
-                                <Check size={12} className="stroke-[3]" />
-                                ĐANG CHỌN
-                              </div>
-                            ) : style.isPast ? (
-                              <div className="w-full h-full min-h-[55px] rounded-2xl flex items-center justify-center transition-all duration-150">
-                                <span className="text-[10px] uppercase font-extrabold text-slate-300 opacity-60">
-                                  ĐÃ QUA
-                                </span>
-                              </div>
-                            ) : (
-                              // Clean, silent empty cell (no text at all). Displays a delicate, round plus badge on hover that never overflows narrow columns!
-                              <div className="w-full h-full min-h-[55px] rounded-2xl flex items-center justify-center transition-all duration-150">
-                                <span className={`transition-all duration-200 flex items-center justify-center w-7 h-7 rounded-full text-emerald-700 bg-emerald-50 shadow-sm border border-emerald-200/80 ${
-                                  isCellHovered ? "opacity-100 scale-100" : "opacity-0 scale-90"
-                                }`}>
-                                  <Plus size={14} className="stroke-[3]" />
-                                </span>
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
+                                
+                                {booking ? (
+                                  <div className={`mt-auto text-[11px] px-2.5 py-1.5 rounded-lg font-bold truncate w-full border ${style.bg}`}>
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <User size={10} className="flex-shrink-0" />
+                                      <span className="truncate">{booking.customerName || booking.userId?.name || booking.userId?.username || "Khách"}</span>
+                                    </div>
+                                  </div>
+                                ) : isSelected ? (
+                                  <div className="mt-auto text-[10px] font-black text-white bg-blue-600 px-2.5 py-1.5 rounded-lg text-center w-full shadow-sm flex justify-center items-center gap-1">
+                                    <Check size={12} className="stroke-[3]" />
+                                    ĐANG CHỌN
+                                  </div>
+                                ) : style.isPast ? (
+                                  <div className="mt-auto text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                                    Đã qua
+                                  </div>
+                                ) : (
+                                  <div className="mt-auto text-[11px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-md w-fit">
+                                    <Plus size={10} className="stroke-[3]" />
+                                    Trống
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -993,7 +1066,7 @@ export default function AdminBookingRequests({
                 {showRejectModal.customerName || showRejectModal.userId?.name || showRejectModal.userId?.username || "Khách"}
               </div>
               <div>
-                <span className="font-bold text-slate-800">Sân cầu lông:</span>{" "}
+                <span className="font-bold text-slate-800">Tên sân:</span>{" "}
                 {showRejectModal.courtName}
               </div>
               <div>
