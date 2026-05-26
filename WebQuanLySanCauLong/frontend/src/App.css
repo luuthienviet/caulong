@@ -51,7 +51,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 6%;
+  padding: 8px 3%;
   background: var(--white);
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
   position: sticky;
@@ -469,7 +469,7 @@ body {
 .main-nav ul {
   display: flex;
   list-style: none;
-  gap: 12px;
+  gap: 8px;
   margin: 0;
   flex-wrap: nowrap;
   white-space: nowrap;
@@ -477,10 +477,11 @@ body {
 
 .main-nav li {
   cursor: pointer;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   transition: background 0.2s ease, color 0.2s ease;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .main-nav li:hover {
