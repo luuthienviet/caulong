@@ -453,7 +453,8 @@ body {
     left: auto;
     width: 300px;
     max-width: calc(100vw - 30px);
-    max-height: calc(100vh - 140px); /* Leave room for bottom nav */
+    max-height: 55vh; /* Safely fit mobile viewports */
+    overflow-y: auto;
     padding-bottom: 20px; /* Ensure content is fully scrollable */
   }
 }
@@ -2868,6 +2869,10 @@ body {
 
   .sug-court-card > div:nth-child(2) {
     padding: 10px 12px !important; /* Smaller suggested court padding */
+  }
+
+  .sug-court-grid {
+    grid-template-columns: 1fr !important;
   }
 
   .ai-recommendation-section {

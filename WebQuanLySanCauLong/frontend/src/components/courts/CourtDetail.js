@@ -294,7 +294,7 @@ function ReviewSection({ court, courts = [], onSelectCourt, user, onRefreshCourt
             <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Gợi ý sân khác</h2>
           </div>
 
-          <div style={{
+          <div className="sug-court-grid" style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${Math.min(otherCourts.length, 4)}, 1fr)`,
             gap: 18, marginBottom: 20
