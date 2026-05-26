@@ -449,9 +449,10 @@ body {
 
 @media (max-width: 768px) {
   .user-menu {
-    left: 10px;
-    right: 10px;
-    width: auto;
+    right: 0;
+    left: auto;
+    width: 300px;
+    max-width: calc(100vw - 30px);
   }
 }
 
@@ -2821,6 +2822,21 @@ body {
 
   .main-content {
     padding-bottom: 70px;
+  }
+
+  .logo {
+    font-size: 1.35rem;
+    gap: 8px;
+  }
+
+  .header {
+    padding: 10px 15px;
+    flex-wrap: nowrap;
+  }
+  
+  .btn-lang {
+    padding: 4px 8px !important;
+    font-size: 0.8rem;
   }
 }
 
