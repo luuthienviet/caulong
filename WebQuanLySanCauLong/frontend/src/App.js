@@ -793,7 +793,7 @@ function App() {
         width: '100%',
         maxWidth: '100%'
       }}>
-        <h1 style={{ color: '#fff', textAlign: 'center', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, textShadow: '2px 4px 10px rgba(0,0,0,0.5)', margin: 0, letterSpacing: '2px' }}>
+        <h1 className="notranslate" style={{ color: '#fff', textAlign: 'center', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, textShadow: '2px 4px 10px rgba(0,0,0,0.5)', margin: 0, letterSpacing: '2px' }}>
           LTV <span style={{ color: '#4cc9f0' }}>COURT</span>
         </h1>
         <p style={{ color: '#f8f9fa', fontSize: 'clamp(1rem, 2vw, 1.4rem)', textAlign: 'center', maxWidth: '800px', margin: '20px 0 40px 0', textShadow: '1px 2px 4px rgba(0,0,0,0.5)', fontWeight: 500 }}>
@@ -826,7 +826,7 @@ function App() {
         <div className="auth-container">
           <div className="auth-card fade-in">
             <div className="auth-info-side" style={{ backgroundImage: "linear-gradient(135deg, rgba(9, 13, 22, 0.65), rgba(30, 27, 75, 0.85)), url('/smash.jpg')" }}>
-              <div className="auth-logo"><span className="logo-brand">LTV</span> <span>COURT</span></div>
+              <div className="auth-logo notranslate"><span className="logo-brand">LTV</span> <span>COURT</span></div>
               <h3>GIA NHẬP CỘNG ĐỒNG</h3>
               <p>Hệ thống quản lý và đặt sân chuyên nghiệp.</p>
               <button className="btn-back-home" onClick={() => setPage('home')}>QUAY LẠI</button>
@@ -850,7 +850,7 @@ function App() {
   return (
     <div className="w-full min-h-screen flex flex-col">
       <header className="header">
-          <div className="logo" onClick={handleLogoClick}>
+          <div className="logo notranslate" onClick={handleLogoClick}>
             <span className="logo-brand">LTV</span> <span>COURT</span>
           </div>
           <nav className="main-nav">
