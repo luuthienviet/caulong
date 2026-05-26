@@ -275,7 +275,7 @@ function App() {
   const headerItems = [
     { label: '🏠 TRANG CHỦ', page: 'home', visible: true },
     { label: '🏆 THỂ LOẠI MÔN', page: 'sports-category', visible: true },
-    { label: '🔎 TRA CỨU ĐƠN', page: 'order-lookup', visible: !user },
+    { label: '🔎 TRA CỨU ĐƠN', page: 'order-lookup', visible: false },
     { label: '📋 LỊCH ĐẶT SÂN', page: 'my-bookings', visible: true },
     { label: '🛒 CỬA HÀNG', page: 'shop', visible: true },
     { label: '🗺️ BẢN ĐỒ', page: 'map', visible: true },
@@ -868,8 +868,9 @@ function App() {
           </nav>
           <div className="header-auth-section">
             <div className="lang-selector-wrapper" style={{ position: 'relative', marginRight: '16px' }}>
-              <button className="btn-lang" onClick={() => setShowLangMenu(!showLangMenu)} style={{ background: 'transparent', border: '1px solid #4361ee', color: '#4361ee', padding: '4px 12px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <img src={`https://hatscripts.github.io/circle-flags/flags/${currentLangFlag}.svg`} alt="lang" style={{ width: '18px', height: '18px', borderRadius: '50%' }} /> Ngôn ngữ
+              <button className="btn-lang" onClick={() => setShowLangMenu(!showLangMenu)}>
+                <img src={`https://hatscripts.github.io/circle-flags/flags/${currentLangFlag}.svg`} alt="lang" className="lang-flag" /> 
+                <span className="lang-text">Ngôn ngữ</span>
               </button>
               {showLangMenu && (
                 <div className="lang-menu" style={{ 
@@ -991,7 +992,7 @@ function App() {
             </div>
           ) : (
             <div className="auth-buttons auth-lookup-buttons">
-              <button className="btn-login-lookup" onClick={() => { setPage('auth'); setAuthMode('login'); }}>Đăng ký / Đăng nhập</button>
+              <button className="btn-login-lookup" onClick={() => { setPage('auth'); setAuthMode('login'); }}>Đăng nhập</button>
             </div>
           )}
         </div>
